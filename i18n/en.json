@@ -1,0 +1,11 @@
+{
+	"@metadata": {
+		"authors": [
+			"Ryan Schmidt"
+		]
+	},
+	"wikimirror-config-remote": "Interwiki prefix of the remote wiki",
+	"wikimirror-desc": "Mirror and fork remote wiki articles",
+	"wikimirror-extensionname": "WikiMirror",
+	"wikimirror-fork": "Fork"
+}

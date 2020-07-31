@@ -1,3 +1,50 @@
 {
-	
+	"name": "WikiMirror",
+	"namemsg": "wikimirror-extensionname",
+	"version": "0.1.0",
+	"author": [
+		"Ryan Schmidt"
+	],
+	"url": "",
+	"license-name": "",
+	"descriptionmsg": "wikimirror-desc",
+	"type": "other",
+	"config": {
+		"WikiMirrorRemote": {
+			"value": null,
+			"path": false,
+			"description": "Interwiki prefix of the remote wiki",
+			"descriptionmsg": "wikimirror-config-remote",
+			"public": true
+		}
+	},
+	"Hooks": {
+		"ArticleRevisionViewCustom": "mirror",
+		"getUserPermissionsErrors": "mirror",
+		"TitleIsAlwaysKnown": "mirror",
+		"WikiPageFactory": "mirror"
+	},
+	"HookHandlers": {
+		"mirror": {
+			"class": "WikiMirror\\Mirror\\Hooks",
+			"services": [
+				"Mirror"
+			]
+		}
+	},
+	"MessagesDirs": {
+		"WikiMirror": [
+			"i18n"
+		]
+	},
+	"AutoloadNamespaces": {
+		"WikiMirror\\": "includes/"
+	},
+	"ServiceWiringFiles": [
+		"includes/ServiceWiring.php"
+	],
+	"requires": {
+		"MediaWiki": ">= 1.35.0"
+	},
+	"manifest_version": 2
 }
