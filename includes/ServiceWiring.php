@@ -11,7 +11,7 @@ return [
 			$services->getHttpRequestFactory(),
 			$services->getMainWANObjectCache(),
 			new ServiceOptions(
-			Mirror::CONSTRUCTOR_OPTIONS,
+				Mirror::CONSTRUCTOR_OPTIONS,
 				$services->getMainConfig()
 			)
 		);

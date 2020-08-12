@@ -110,7 +110,7 @@ class Hooks implements
 		// set page metadata like displaytitle based on what remote had
 		// this is a safe operation, setPageTitle() and getDisplayTitle() both sanitize the passed-in value
 		// (although setDisplayTitle() does not sanitize, it can only be read via getDisplayTitle())
-		$remoteData = $this->mirror->getCached( $title );
+		$remoteData = $this->mirror->getCachedPage( $title );
 		$out->setPageTitle( $remoteData->displayTitle );
 		$out->setDisplayTitle( $remoteData->displayTitle );
 

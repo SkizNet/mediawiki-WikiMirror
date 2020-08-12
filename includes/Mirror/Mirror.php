@@ -9,6 +9,7 @@ use MediaWiki\MediaWikiServices;
 use Title;
 use WANObjectCache;
 use WikiMirror\API\PageInfoResponse;
+use WikiMirror\API\RevisionInfoResponse;
 
 class Mirror {
 	/** @var string[] */
@@ -76,15 +77,15 @@ class Mirror {
 	 * @endcode
 	 *
 	 * @param Title $title Title to fetch
-	 * @return PageInfoResponse|null Array of page data from remote API, or null on failure
+	 * @return PageInfoResponse|null Page data from remote API, or null on failure
 	 */
-	public function getCached( Title $title ) {
+	public function getCachedPage( Title $title ) {
 		$id = hash( 'sha256', $title->getPrefixedText() );
 		$value = $this->cache->getWithSetCallback(
 			$this->cache->makeKey( 'mirror', 'remote-info', $id ),
 			$this->options->get( 'TranscludeCacheExpiry' ),
 			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $title ) {
-				return $this->getLive( $title );
+				return $this->getLivePage( $title );
 			},
 			[
 				'pcTTL' => $this->cache::TTL_PROC_LONG,
@@ -102,15 +103,15 @@ class Mirror {
 
 	/**
 	 * Fetch page information from remote wiki API.
-	 * Do not directly call this; call getCached() instead.
+	 * Do not directly call this; call getCachedPage() instead.
 	 *
 	 * @param Title $title Title to fetch
 	 * @return array|bool|null False upon transient failure,
 	 * 		null if page can't be mirrored,
 	 * 		array of information from remote wiki on success
-	 * @see Mirror::getCached()
+	 * @see Mirror::getCachedPage()
 	 */
-	private function getLive( Title $title ) {
+	private function getLivePage( Title $title ) {
 		// We say that the title can be mirrored if:
 		// 1. The title exists on the remote wiki
 		// 2. It is not a sensitive page (MediaWiki:*, user css/js/json pages)
@@ -147,9 +148,14 @@ class Mirror {
 		$params = [
 			'format' => 'json',
 			'action' => 'query',
-			'prop' => 'info',
+			'prop' => 'info|revisions|links',
 			'indexpageids' => 1,
 			'inprop' => 'displaytitle',
+			'rvdir' => 'older',
+			'rvlimit' => 1,
+			'rvprop' => 'ids|timestamp|user|userid|size|slotsize|sha1|slotsha1|contentmodel|comment',
+			'rvslots' => '*',
+			'pllimit' => 1,
 			'titles' => $title->getPrefixedText()
 		];
 
@@ -182,6 +188,6 @@ class Mirror {
 	 * @return bool True if the title can be mirrored, false if not.
 	 */
 	public function canMirror( Title $title ) {
-		return $this->getCached( $title ) !== null;
+		return $this->getCachedPage( $title ) !== null;
 	}
 }

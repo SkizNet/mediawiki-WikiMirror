@@ -2,6 +2,8 @@
 
 namespace WikiMirror\API;
 
+use Title;
+
 /**
  * Wrapper around MediaWiki's API action=query&prop=info response
  */
@@ -26,10 +28,12 @@ class PageInfoResponse {
 	public $lastRevisionId;
 	/** @var int */
 	public $length;
-	/** @var string|null Null if this page is not a redirect */
+	/** @var Title|null */
 	public $redirect;
 	/** @var string */
 	public $displayTitle;
+	/** @var RevisionInfoResponse|null */
+	public $lastRevision;
 
 	/**
 	 * PageInfoResponse constructor.
@@ -47,7 +51,24 @@ class PageInfoResponse {
 		$this->touched = $response['touched'];
 		$this->lastRevisionId = $response['lastrevid'];
 		$this->length = $response['length'];
-		$this->redirect = $response['redirect'] ?: null;
 		$this->displayTitle = $response['displaytitle'];
+
+		if ( array_key_exists( 'revisions', $response ) ) {
+			$this->lastRevision = new RevisionInfoResponse( $response['revisions'][0] );
+		} else {
+			$this->lastRevision = null;
+		}
+
+		if ( array_key_exists( 'redirect', $response ) && array_key_exists( 'links', $response ) ) {
+			// convert to db key form
+			$title = str_replace( ' ', '_', $response['links'][0]['title'] );
+			$this->redirect = Title::makeTitleSafe( $response['links'][0]['ns'], $title );
+		} else {
+			$this->redirect = null;
+		}
+	}
+
+	public function getTitle() {
+		return Title::makeTitleSafe( $this->namespace, str_replace( ' ', '_', $this->title ) );
 	}
 }
