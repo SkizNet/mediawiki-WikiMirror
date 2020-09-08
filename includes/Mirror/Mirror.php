@@ -5,11 +5,11 @@ namespace WikiMirror\Mirror;
 use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Interwiki\InterwikiLookup;
-use MediaWiki\MediaWikiServices;
+use Status;
 use Title;
 use WANObjectCache;
 use WikiMirror\API\PageInfoResponse;
-use WikiMirror\API\RevisionInfoResponse;
+use WikiMirror\API\ParseResponse;
 
 class Mirror {
 	/** @var string[] */
@@ -58,26 +58,8 @@ class Mirror {
 	 * The data is cached for $wgTranscludeCacheExpiry time, although stale data
 	 * may be returned if we are unable to contact the remote wiki.
 	 *
-	 * On success, the returned array looks like the following:
-	 * @code
-	 * [
-	 *   "pageid" => 1423,
-	 *   "ns" => 0,
-	 *   "title" => "Main Page",
-	 *   "contentmodel" => "wikitext",
-	 *   "pagelanguage" => "en",
-	 *   "pagelanguagehtmlcode" => "en",
-	 *   "pagelanguagedir" => "ltr",
-	 *   "touched" => "2020-07-23T13:18:52Z",
-	 *   "lastrevid" => 5875,
-	 *   "length" => 23,
-	 *   "redirect" => "",
-	 *   "displaytitle" => "Main Page"
-	 * ]
-	 * @endcode
-	 *
 	 * @param Title $title Title to fetch
-	 * @return PageInfoResponse|null Page data from remote API, or null on failure
+	 * @return Status On success, page data from remote API as a PageInfoResponse
 	 */
 	public function getCachedPage( Title $title ) {
 		$id = hash( 'sha256', $title->getPrefixedText() );
@@ -95,15 +77,168 @@ class Mirror {
 		);
 
 		if ( $value === null ) {
+			return Status::newFatal( 'wikimirror-no-mirror', $title->getPrefixedText() );
+		}
+
+		return Status::newGood( new PageInfoResponse( $value ) );
+	}
+
+	/**
+	 * Retrieve cached page text, refreshing the cache as necessary.
+	 * The data is cached for $wgTranscludeCacheExpiry time, although stale data
+	 * may be returned if we are unable to contact the remote wiki.
+	 *
+	 * @param Title $title Title to fetch
+	 * @return Status On success, page text from remote API as a ParseResponse
+	 */
+	public function getCachedText( Title $title ) {
+		$id = hash( 'sha256', $title->getPrefixedText() );
+		$value = $this->cache->getWithSetCallback(
+			$this->cache->makeKey( 'mirror', 'remote-text', $id ),
+			$this->options->get( 'TranscludeCacheExpiry' ),
+			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $title ) {
+				return $this->getLiveText( $title );
+			},
+			[
+				'pcTTL' => $this->cache::TTL_PROC_LONG,
+				'pcGroup' => self::PC_GROUP,
+				'staleTTL' => $this->cache::TTL_DAY
+			]
+		);
+
+		if ( $value === null ) {
+			return Status::newFatal( 'wikimirror-no-mirror', $title->getPrefixedText() );
+		}
+
+		return Status::newGood( new ParseResponse( $value ) );
+	}
+
+	/**
+	 * Fetch rendered HTML and raw wikitext from remote wiki API.
+	 * Do not directly call this; call getCachedText() instead.
+	 *
+	 * On success, the returned array looks like the following:
+	 * @code
+	 * [
+	 *    "title" => "Page title",
+	 *    "pageid" => 1234,
+	 *    "text" => [
+	 *      "*" => "Rendered HTML of page"
+	 *    ],
+	 *    "langlinks" => [
+	 *      [
+	 *        "lang" => "de",
+	 *        "url" => "URL of remote language page",
+	 *        "langname" => "German",
+	 *        "autonym" => "Not sure what this is",
+	 *        "*" => "Name of remote language page"
+	 *      ],
+	 *      ...
+	 *    ],
+	 *    "categories" => [
+	 *      [
+	 *        "sortkey" => "Sort key or empty string",
+	 *        "hidden" => "", // omitted if category is not hidden
+	 *        "*" => "Category db key (unprefixed)"
+	 *      ],
+	 *      ...
+	 *    ],
+	 *    "modules" => [
+	 *      "ext.module1",
+	 *      ...
+	 *    ],
+	 *    "modulescripts" => [
+	 *      "ext.module1.scripts",
+	 *      ...
+	 *    ],
+	 *    "modulestyles" => [
+	 *      "ext.module1.styles",
+	 *      ...
+	 *    ],
+	 *    "jsconfigvars" => [
+	 *      "var1" => "value",
+	 *      ...
+	 *    ],
+	 *    "indicators" => [
+	 *      [
+	 *        "name" => "featured-star",
+	 *        "*" => "HTML of indicator"
+	 *      ],
+	 *      ...
+	 *    ],
+	 *    "wikitext" => [
+	 *      "*" => "Wikitext"
+	 *    ],
+	 *    "properties" => [
+	 *      [
+	 *        "name" => "displaytitle",
+	 *        "*" => "Property value"
+	 *      ],
+	 *      ...
+	 *    ]
+	 * ]
+	 * @endcode
+	 *
+	 * @param Title $title Title to fetch
+	 * @return array|bool|null False upon transient failure,
+	 * 		null if page can't be mirrored,
+	 * 		array of information from remote wiki on success
+	 * @see Mirror::getCachedText()
+	 */
+	public function getLiveText( Title $title ) {
+		$status = $this->getCachedPage( $title );
+		if ( !$status->isOK() ) {
 			return null;
 		}
 
-		return new PageInfoResponse( $value );
+		/** @var PageInfoResponse $pageInfo */
+		$pageInfo = $status->getValue();
+
+		$remoteWiki = $this->options->get( 'WikiMirrorRemote' );
+		$interwiki = $this->interwikiLookup->fetch( $remoteWiki );
+		$apiUrl = $interwiki->getAPI();
+		$params = [
+			'format' => 'json',
+			'action' => 'parse',
+			'oldid' => $pageInfo->lastRevisionId,
+			'prop' => 'text|langlinks|categorieshtml|modules|jsconfigvars|indicators|wikitext|properties',
+			'disablelimitreport' => true,
+			'disableeditsection' => true
+		];
+
+		$res = $this->httpRequestFactory->get( wfAppendQuery( $apiUrl, $params ), [], __METHOD__ );
+
+		if ( $res === null ) {
+			// API error
+			return false;
+		}
+
+		$data = json_decode( $res, true );
+
+		return $data['parse'];
 	}
 
 	/**
 	 * Fetch page information from remote wiki API.
 	 * Do not directly call this; call getCachedPage() instead.
+	 *
+	 * On success, the returned array looks like the following:
+	 * @code
+	 * [
+	 *   "pageid" => 1423,
+	 *   "ns" => 0,
+	 *   "title" => "Main Page",
+	 *   "contentmodel" => "wikitext",
+	 *   "pagelanguage" => "en",
+	 *   "pagelanguagehtmlcode" => "en",
+	 *   "pagelanguagedir" => "ltr",
+	 *   "touched" => "2020-07-23T13:18:52Z",
+	 *   "lastrevid" => 5875,
+	 *   "length" => 23,
+	 *   "redirect" => "",
+	 *   "displaytitle" => "Main Page"
+	 * ]
+	 * @endcode
 	 *
 	 * @param Title $title Title to fetch
 	 * @return array|bool|null False upon transient failure,
@@ -125,8 +260,7 @@ class Mirror {
 			return false;
 		}
 
-		$iwLookup = MediaWikiServices::getInstance()->getInterwikiLookup();
-		$interwiki = $iwLookup->fetch( $remoteWiki );
+		$interwiki = $this->interwikiLookup->fetch( $remoteWiki );
 		if ( $interwiki === null || $interwiki === false ) {
 			// invalid interwiki configuration
 			return false;
@@ -159,8 +293,7 @@ class Mirror {
 			'titles' => $title->getPrefixedText()
 		];
 
-		$http = MediaWikiServices::getInstance()->getHttpRequestFactory();
-		$res = $http->get( wfAppendQuery( $apiUrl, $params ), [], __METHOD__ );
+		$res = $this->httpRequestFactory->get( wfAppendQuery( $apiUrl, $params ), [], __METHOD__ );
 
 		if ( $res === null ) {
 			// API error
@@ -188,6 +321,6 @@ class Mirror {
 	 * @return bool True if the title can be mirrored, false if not.
 	 */
 	public function canMirror( Title $title ) {
-		return $this->getCachedPage( $title ) !== null;
+		return $this->getCachedPage( $title )->isOK();
 	}
 }

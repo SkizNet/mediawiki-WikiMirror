@@ -43,6 +43,7 @@
 	"ServiceWiringFiles": [
 		"includes/ServiceWiring.php"
 	],
+	"callback": "WikiMirror\\Setup::callback",
 	"requires": {
 		"MediaWiki": ">= 1.35.0"
 	},

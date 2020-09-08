@@ -6,6 +6,8 @@ use MediaWiki\MediaWikiServices;
 use MWException;
 use ReflectionClass;
 use ReflectionException;
+use Wikimedia\Rdbms\LoadBalancer;
+use WikiMirror\API\PageInfoResponse;
 use WikiPage;
 
 class WikiRemotePage extends WikiPage {
@@ -28,11 +30,13 @@ class WikiRemotePage extends WikiPage {
 		// construct a row object given information from the remote wiki
 		/** @var Mirror $mirror */
 		$mirror = MediaWikiServices::getInstance()->get( 'Mirror' );
-		$pageData = $mirror->getCachedPage( $this->mTitle );
+		$status = $mirror->getCachedPage( $this->mTitle );
 
-		if ( $pageData === null ) {
+		if ( !$status->isOK() ) {
 			$row = false;
 		} else {
+			/** @var PageInfoResponse $pageData */
+			$pageData = $status->getValue();
 			$row = (object)[
 				// don't expose remote page/rev id, we want mw to know this page doesn't exist locally
 				'page_id' => 0,
@@ -61,11 +65,24 @@ class WikiRemotePage extends WikiPage {
 	protected function loadLastEdit() {
 		/** @var Mirror $mirror */
 		$mirror = MediaWikiServices::getInstance()->get( 'Mirror' );
-		$revData = $mirror->getCachedPage( $this->mTitle );
-		$revision = new RemoteRevisionRecord( $revData );
+		$status = $mirror->getCachedPage( $this->mTitle );
+		if ( !$status->isOK() ) {
+			throw new MWException( $status->getMessage() );
+		}
 
-		// annoyingly setLastEdit is marked as private instead of protected in WikiPage...
+		/** @var PageInfoResponse $revData */
+		$revData = $status->getValue();
+
+		// Annoyingly setLastEdit and getDBLoadBalancer are marked as private instead of protected in WikiPage...
+		// Need to use Reflection to call them.
 		$reflection = new ReflectionClass( WikiPage::class );
+
+		$getDBLoadBalancer = $reflection->getMethod( 'getDBLoadBalancer' );
+		/** @var LoadBalancer $loadBalancer */
+		$loadBalancer = $getDBLoadBalancer->invoke( $this );
+
+		$revision = new RemoteRevisionRecord( $revData, $loadBalancer );
+
 		$setLastEdit = $reflection->getMethod( 'setLastEdit' );
 		$setLastEdit->invoke( $this, $revision );
 	}

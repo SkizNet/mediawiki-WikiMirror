@@ -40,7 +40,7 @@ class PageInfoResponse {
 	 *
 	 * @param array $response Associative array of API response
 	 */
-	public function __construct( $response ) {
+	public function __construct( array $response ) {
 		$this->pageId = $response['pageid'];
 		$this->namespace = $response['ns'];
 		$this->title = $response['title'];

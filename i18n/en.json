@@ -7,5 +7,6 @@
 	"wikimirror-config-remote": "Interwiki prefix of the remote wiki",
 	"wikimirror-desc": "Mirror and fork remote wiki articles",
 	"wikimirror-extensionname": "WikiMirror",
-	"wikimirror-fork": "Fork"
+	"wikimirror-fork": "Fork",
+	"wikimirror-no-mirror": "Unable to mirror $1. It may not exist on the remote wiki or may be a sensitive page."
 }

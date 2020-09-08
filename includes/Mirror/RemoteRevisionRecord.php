@@ -22,6 +22,7 @@ class RemoteRevisionRecord extends RevisionRecord {
 	 * RemoteRevisionRecord constructor.
 	 *
 	 * @param PageInfoResponse $remoteData
+	 * @param LoadBalancer $loadBalancer
 	 * @throws MWException
 	 */
 	public function __construct( PageInfoResponse $remoteData, LoadBalancer $loadBalancer ) {

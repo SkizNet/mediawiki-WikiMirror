@@ -11,6 +11,8 @@ use MessageSpecifier;
 use OutputPage;
 use Title;
 use User;
+use WikiMirror\API\PageInfoResponse;
+use WikiMirror\API\ParseResponse;
 use WikiPage;
 
 class Hooks implements
@@ -110,11 +112,25 @@ class Hooks implements
 		// set page metadata like displaytitle based on what remote had
 		// this is a safe operation, setPageTitle() and getDisplayTitle() both sanitize the passed-in value
 		// (although setDisplayTitle() does not sanitize, it can only be read via getDisplayTitle())
-		$remoteData = $this->mirror->getCachedPage( $title );
+		$status = $this->mirror->getCachedPage( $title );
+		if ( !$status->isOK() ) {
+			return true;
+		}
+
+		/** @var PageInfoResponse $remoteData */
+		$remoteData = $status->getValue();
 		$out->setPageTitle( $remoteData->displayTitle );
 		$out->setDisplayTitle( $remoteData->displayTitle );
 
-		// grab the rendered version of this page from the remote (action=render)
+		// grab the rendered html of this page from the remote
+		$status = $this->mirror->getCachedText( $title );
+		if ( !$status->isOK() ) {
+			return true;
+		}
+
+		/** @var ParseResponse $remoteText */
+		$remoteText = $status->getValue();
+		$out->addParserOutput( $remoteText->getParserOutput() );
 
 		// sanitize the rendered HTML for display on our site:
 		// 1. Replace remote wiki URLs with local ones

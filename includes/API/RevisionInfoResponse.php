@@ -41,7 +41,7 @@ class RevisionInfoResponse {
 	 *
 	 * @param array $response Associative array of API response
 	 */
-	public function __construct( $response ) {
+	public function __construct( array $response ) {
 		$this->revisionId = $response['revid'];
 		$this->parentId = $response['parentid'];
 		$this->user = $response['user'];
@@ -91,13 +91,19 @@ class RevisionInfoResponse {
 	 * Retrieves the content model for the specified slot
 	 *
 	 * @param string $slot Slot name
+	 * @param bool $fetchRealModel If true, fetches real content model from slotInfo.
+	 * 		If false, return value is always 'mirror'
 	 * @return string Content model
 	 */
-	public function getSlotContentModel( $slot ) {
+	public function getSlotContentModel( $slot, $fetchRealModel = false ) {
 		if ( !array_key_exists( $slot, $this->slotInfo ) ) {
 			throw new InvalidArgumentException( 'The specified slot does not exist: ' . $slot );
 		}
 
-		return $this->slotInfo[$slot]['contentmodel'];
+		if ( $fetchRealModel ) {
+			return $this->slotInfo[$slot]['contentmodel'];
+		}
+
+		return CONTENT_MODEL_MIRROR;
 	}
 }
