@@ -75,11 +75,16 @@ class RemoteRevisionRecord extends RevisionRecord {
 			$row = (object)[
 				'slot_revision_id' => $revision->revisionId,
 				'slot_role_id' => $this->slotRoles[$slot],
-				'slot_content_id' => null,
+				'slot_content_id' => 0,
 				'slot_origin' => $revision->revisionId,
+				'content_id' => 0,
 				'content_size' => $revision->getSlotSize( $slot ),
 				'content_sha1' => $revision->getSlotSha1( $slot ),
+				'content_model' => 0,
+				'content_address' => null,
 				'model_name' => $revision->getSlotContentModel( $slot ),
+				'role_id' => $this->slotRoles[$slot],
+				'role_name' => $slot
 			];
 
 			$slots[] = new SlotRecord( $row, [ $this, 'getRemoteSlotContent' ] );
@@ -95,11 +100,7 @@ class RemoteRevisionRecord extends RevisionRecord {
 	 * @return Content Content of slot
 	 */
 	public function getRemoteSlotContent( SlotRecord $record ) {
-		// TODO: FINISH
-		// We should probably create a new AbstractContent subclass and then lie about
-		// the content model in the SlotRecord entry to point at our subclass.
-		// Then our custom ContentHandler class can correctly handle everything.
-		return null;
+		return new MirrorContent( $this->remoteData );
 	}
 
 	/**

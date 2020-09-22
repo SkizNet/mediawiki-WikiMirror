@@ -19,7 +19,6 @@
 		}
 	},
 	"Hooks": {
-		"ArticleRevisionViewCustom": "mirror",
 		"getUserPermissionsErrors": "mirror",
 		"TitleIsAlwaysKnown": "mirror",
 		"WikiPageFactory": "mirror"
@@ -39,6 +38,9 @@
 	},
 	"AutoloadNamespaces": {
 		"WikiMirror\\": "includes/"
+	},
+	"ContentHandlers": {
+		"mirror": "WikiMirror\\Mirror\\MirrorContentHandler"
 	},
 	"ServiceWiringFiles": [
 		"includes/ServiceWiring.php"

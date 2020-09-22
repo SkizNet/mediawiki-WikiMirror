@@ -38,8 +38,8 @@ class WikiRemotePage extends WikiPage {
 			/** @var PageInfoResponse $pageData */
 			$pageData = $status->getValue();
 			$row = (object)[
-				// don't expose remote page/rev id, we want mw to know this page doesn't exist locally
-				'page_id' => 0,
+				// we need to trick mediawiki into thinking this page exists locally
+				'page_id' => $pageData->pageId,
 				'page_namespace' => $this->mTitle->getNamespace(),
 				'page_title' => $this->mTitle->getDBkey(),
 				'page_restrictions' => '',
@@ -59,7 +59,6 @@ class WikiRemotePage extends WikiPage {
 
 	/**
 	 * @inheritDoc
-	 * @throws ReflectionException If the underlying MW version is unsupported by this extension
 	 * @throws MWException On error
 	 */
 	protected function loadLastEdit() {
@@ -73,17 +72,35 @@ class WikiRemotePage extends WikiPage {
 		/** @var PageInfoResponse $revData */
 		$revData = $status->getValue();
 
-		// Annoyingly setLastEdit and getDBLoadBalancer are marked as private instead of protected in WikiPage...
-		// Need to use Reflection to call them.
-		$reflection = new ReflectionClass( WikiPage::class );
-
-		$getDBLoadBalancer = $reflection->getMethod( 'getDBLoadBalancer' );
+		// Annoyingly setLastEdit and getDBLoadBalancer are marked as private instead of protected in WikiPage.
 		/** @var LoadBalancer $loadBalancer */
-		$loadBalancer = $getDBLoadBalancer->invoke( $this );
-
+		$loadBalancer = $this->callPrivateMethod( WikiPage::class, 'getDBLoadBalancer', $this );
 		$revision = new RemoteRevisionRecord( $revData, $loadBalancer );
+		$this->callPrivateMethod( WikiPage::class, 'setLastEdit', $this, [ $revision ] );
+	}
 
-		$setLastEdit = $reflection->getMethod( 'setLastEdit' );
-		$setLastEdit->invoke( $this, $revision );
+	/**
+	 * Call a private method via Reflection
+	 *
+	 * @param string $class Class name
+	 * @param string $method Method name
+	 * @param object|null $object Object to call method on, or null for a static method
+	 * @param array $args Arguments to method
+	 * @return mixed Return value of method called
+	 * @throws MWException On error
+	 */
+	private function callPrivateMethod( string $class, string $method, ?object $object, $args = [] ) {
+		try {
+			$reflection = new ReflectionClass( $class );
+			$method = $reflection->getMethod( $method );
+			$method->setAccessible( true );
+			$value = $method->invokeArgs( $object, $args );
+			$method->setAccessible( false );
+			return $value;
+		} catch ( ReflectionException $e ) {
+			// wrap the ReflectionException into a MWException for friendlier error display
+			throw new MWException(
+				'The WikiMirror extension is not compatible with your MediaWiki version', 0, $e );
+		}
 	}
 }

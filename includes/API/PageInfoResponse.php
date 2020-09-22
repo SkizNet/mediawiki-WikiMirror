@@ -2,6 +2,8 @@
 
 namespace WikiMirror\API;
 
+use MWException;
+use WikiMirror\Mirror\Mirror;
 use Title;
 
 /**
@@ -34,13 +36,20 @@ class PageInfoResponse {
 	public $displayTitle;
 	/** @var RevisionInfoResponse|null */
 	public $lastRevision;
+	/** @var Mirror */
+	private $mirror;
+	/** @var Title */
+	private $titleObj = null;
 
 	/**
 	 * PageInfoResponse constructor.
 	 *
+	 * @param Mirror $mirror Mirror service that generated $response
 	 * @param array $response Associative array of API response
 	 */
-	public function __construct( array $response ) {
+	public function __construct( Mirror $mirror, array $response ) {
+		$this->mirror = $mirror;
+
 		$this->pageId = $response['pageid'];
 		$this->namespace = $response['ns'];
 		$this->title = $response['title'];
@@ -68,7 +77,31 @@ class PageInfoResponse {
 		}
 	}
 
+	/**
+	 * Get Title object for remote page
+	 *
+	 * @return Title
+	 */
 	public function getTitle() {
-		return Title::makeTitleSafe( $this->namespace, str_replace( ' ', '_', $this->title ) );
+		if ( $this->titleObj === null ) {
+			$this->titleObj = Title::newFromText( $this->title );
+		}
+
+		return $this->titleObj;
+	}
+
+	/**
+	 * Get text for the remote page
+	 *
+	 * @return ParseResponse
+	 * @throws MWException On error
+	 */
+	public function getText() {
+		$status = $this->mirror->getCachedText( $this->getTitle() );
+		if ( $status->isOK() ) {
+			return $status->getValue();
+		}
+
+		throw new MWException( $status->getMessage()->plain() );
 	}
 }

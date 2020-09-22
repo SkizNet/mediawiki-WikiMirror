@@ -51,6 +51,7 @@ class Mirror {
 		$this->interwikiLookup = $interwikiLookup;
 		$this->httpRequestFactory = $httpRequestFactory;
 		$this->cache = $wanObjectCache;
+		$this->options = $options;
 	}
 
 	/**
@@ -63,10 +64,13 @@ class Mirror {
 	 */
 	public function getCachedPage( Title $title ) {
 		$id = hash( 'sha256', $title->getPrefixedText() );
+		$pageName = $title->getPrefixedText();
+		wfDebugLog( 'WikiMirror', "Retrieving cached info for {$pageName}." );
 		$value = $this->cache->getWithSetCallback(
 			$this->cache->makeKey( 'mirror', 'remote-info', $id ),
 			$this->options->get( 'TranscludeCacheExpiry' ),
-			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $title ) {
+			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $title, $pageName ) {
+				wfDebugLog( 'WikiMirror', "{$pageName}: Info not found in cache." );
 				return $this->getLivePage( $title );
 			},
 			[
@@ -76,11 +80,11 @@ class Mirror {
 			]
 		);
 
-		if ( $value === null ) {
+		if ( !$value ) {
 			return Status::newFatal( 'wikimirror-no-mirror', $title->getPrefixedText() );
 		}
 
-		return Status::newGood( new PageInfoResponse( $value ) );
+		return Status::newGood( new PageInfoResponse( $this, $value ) );
 	}
 
 	/**
@@ -93,10 +97,13 @@ class Mirror {
 	 */
 	public function getCachedText( Title $title ) {
 		$id = hash( 'sha256', $title->getPrefixedText() );
+		$pageName = $title->getPrefixedText();
+		wfDebugLog( 'WikiMirror', "Retrieving cached text for {$pageName}." );
 		$value = $this->cache->getWithSetCallback(
 			$this->cache->makeKey( 'mirror', 'remote-text', $id ),
 			$this->options->get( 'TranscludeCacheExpiry' ),
-			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $title ) {
+			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $title, $pageName ) {
+				wfDebugLog( 'WikiMirror', "{$pageName}: Text not found in cache." );
 				return $this->getLiveText( $title );
 			},
 			[
@@ -106,11 +113,13 @@ class Mirror {
 			]
 		);
 
-		if ( $value === null ) {
+		$pageInfo = $this->getCachedPage( $title );
+
+		if ( !$value || !$pageInfo->isOK() ) {
 			return Status::newFatal( 'wikimirror-no-mirror', $title->getPrefixedText() );
 		}
 
-		return Status::newGood( new ParseResponse( $value ) );
+		return Status::newGood( new ParseResponse( $this, $value, $pageInfo->getValue() ) );
 	}
 
 	/**
@@ -201,7 +210,7 @@ class Mirror {
 			'format' => 'json',
 			'action' => 'parse',
 			'oldid' => $pageInfo->lastRevisionId,
-			'prop' => 'text|langlinks|categorieshtml|modules|jsconfigvars|indicators|wikitext|properties',
+			'prop' => 'text|langlinks|categories|modules|jsconfigvars|indicators|wikitext|properties',
 			'disablelimitreport' => true,
 			'disableeditsection' => true
 		];
@@ -210,6 +219,7 @@ class Mirror {
 
 		if ( $res === null ) {
 			// API error
+			wfWarn( "{$title->getPrefixedText()}: error with remote mirror API action=parse." );
 			return false;
 		}
 
@@ -257,12 +267,14 @@ class Mirror {
 		$remoteWiki = $this->options->get( 'WikiMirrorRemote' );
 		if ( $remoteWiki === null ) {
 			// no remote wiki configured, so we can't mirror anything
+			wfLogWarning( '$wgWikiMirrorRemote not configured.' );
 			return false;
 		}
 
 		$interwiki = $this->interwikiLookup->fetch( $remoteWiki );
 		if ( $interwiki === null || $interwiki === false ) {
 			// invalid interwiki configuration
+			wfLogWarning( 'Invalid interwiki configuration for $wgWikiMirrorRemote.' );
 			return false;
 		}
 
@@ -274,6 +286,8 @@ class Mirror {
 		) {
 			// title refers to an interwiki page or a sensitive page
 			// cache a null value here so we don't need to continually carry out these checks
+			wfDebugLog( 'WikiMirror',
+				"{$title->getPrefixedText()} is an external or sensitive page; not mirroring." );
 			return null;
 		}
 
@@ -297,6 +311,7 @@ class Mirror {
 
 		if ( $res === null ) {
 			// API error
+			wfWarn( "{$title->getPrefixedText()}: error with remote mirror API action=query." );
 			return false;
 		}
 
@@ -305,6 +320,7 @@ class Mirror {
 			// == instead of === is intentional; right now the API returns a string for the page id
 			// but I'd rather not rely on that behavior. This lets the -1 be coerced to int if required.
 			// This indicates the page doesn't exist on the remote, so cache that failure result.
+			wfDebug( "{$title->getPrefixedText()} doesn't exist on remote mirror." );
 			return null;
 		}
 
@@ -315,12 +331,11 @@ class Mirror {
 
 	/**
 	 * Determine whether or not the given title is eligible to be mirrored.
-	 * This does not check local fork status.
 	 *
 	 * @param Title $title
 	 * @return bool True if the title can be mirrored, false if not.
 	 */
 	public function canMirror( Title $title ) {
-		return $this->getCachedPage( $title )->isOK();
+		return !$title->exists() && $this->getCachedPage( $title )->isOK();
 	}
 }

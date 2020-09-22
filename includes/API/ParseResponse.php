@@ -3,6 +3,7 @@
 namespace WikiMirror\API;
 
 use ParserOutput;
+use WikiMirror\Mirror\Mirror;
 
 class ParseResponse {
 	/** @var string */
@@ -29,13 +30,21 @@ class ParseResponse {
 	public $wikitext;
 	/** @var array */
 	public $properties;
+	/** @var PageInfoResponse */
+	private $pageInfo;
+	/** @var Mirror */
+	private $mirror;
 
 	/**
 	 * ParseResponse constructor.
 	 *
+	 * @param Mirror $mirror Mirror service that generated $response
 	 * @param array $response Associative array of API response
+	 * @param PageInfoResponse $pageInfo Page info corresponding to parsed text
 	 */
-	public function __construct( array $response ) {
+	public function __construct( Mirror $mirror, array $response, PageInfoResponse $pageInfo ) {
+		$this->mirror = $mirror;
+		$this->pageInfo = $pageInfo;
 		$this->title = $response['title'];
 		$this->pageId = $response['pageid'];
 		$this->html = $response['text']['*'];
@@ -43,7 +52,7 @@ class ParseResponse {
 		$this->moduleScripts = $response['modulescripts'];
 		$this->moduleStyles = $response['modulestyles'];
 		$this->jsConfigVars = $response['jsconfigvars'];
-		$this->wikitext = $response['wikitext'];
+		$this->wikitext = $response['wikitext']['*'];
 		$this->languageLinks = $response['langlinks'];
 		$this->categoryLinks = $response['categories'];
 
@@ -70,7 +79,18 @@ class ParseResponse {
 			$output->setDisplayTitle( $this->properties['displaytitle'] );
 			unset( $this->properties['displaytitle'] );
 		}
-		
+
+		foreach ( $this->indicators as $name => $html ) {
+			$output->setIndicator( $name, $html );
+		}
+
+		$output->hideNewSection( true );
+		if ( $this->pageInfo->lastRevisionId ) {
+			$output->setTimestamp( wfTimestamp( TS_MW, $this->pageInfo->lastRevision->timestamp ) );
+		} else {
+			$output->setTimestamp( wfTimestamp( TS_MW ) );
+		}
+
 		return $output;
 	}
 }
