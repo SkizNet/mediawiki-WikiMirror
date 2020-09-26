@@ -84,18 +84,13 @@ class RevisionLookupManipulator implements RevisionLookup {
 
 	/**
 	 * @inheritDoc
+	 * @throws MWException
 	 */
 	public function getKnownCurrentRevision( Title $title, $revId = 0 ) {
 		if ( !$revId && $this->mirror->canMirror( $title ) ) {
 			$status = $this->mirror->getCachedPage( $title );
 			if ( $status->isOK() ) {
-				try {
-					return new RemoteRevisionRecord( $status->getValue() );
-				} catch ( MWException $e ) {
-					// swallow exception and run default logic
-					// although do log a warning about this
-					wfLogWarning( $e->getMessage() );
-				}
+				return new RemoteRevisionRecord( $status->getValue() );
 			}
 		}
 
