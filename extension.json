@@ -19,16 +19,23 @@
 		}
 	},
 	"Hooks": {
-		"getUserPermissionsErrors": "mirror",
-		"TitleIsAlwaysKnown": "mirror",
-		"WikiPageFactory": "mirror"
+		"getUserPermissionsErrors": "wikimirror-mirror",
+		"MediaWikiServices": "wikimirror-service",
+		"SkinTemplateNavigation::Universal": "wikimirror-mirror",
+		"TitleIsAlwaysKnown": "wikimirror-mirror",
+		"WikiPageFactory": "wikimirror-mirror"
 	},
 	"HookHandlers": {
-		"mirror": {
+		"wikimirror-mirror": {
 			"class": "WikiMirror\\Mirror\\Hooks",
 			"services": [
-				"Mirror"
+				"Mirror",
+				"PermissionManager"
 			]
+		},
+		"wikimirror-service": {
+			"class": "WikiMirror\\Service\\Hooks",
+			"services": []
 		}
 	},
 	"MessagesDirs": {
@@ -36,8 +43,17 @@
 			"i18n"
 		]
 	},
+	"ExtensionMessagesFiles": {
+		"WikiMirrorAlias": "includes/WikiMirror.i18n.alias.php"
+	},
 	"AutoloadNamespaces": {
 		"WikiMirror\\": "includes/"
+	},
+	"AvailableRights": [
+		"fork"
+	],
+	"SpecialPages": {
+		"Fork": "WikiMirror\\Fork\\SpecialFork"
 	},
 	"ContentHandlers": {
 		"mirror": "WikiMirror\\Mirror\\MirrorContentHandler"

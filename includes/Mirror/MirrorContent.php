@@ -3,6 +3,7 @@
 namespace WikiMirror\Mirror;
 
 use MWException;
+use OOUI\ButtonWidget;
 use ParserOptions;
 use ParserOutput;
 use TextContent;
@@ -46,6 +47,17 @@ class MirrorContent extends TextContent {
 		$generateHtml,
 		ParserOutput &$output
 	) {
+		$mirrorIndicator = new ButtonWidget( [
+			'href' => $this->pageInfo->getUrl(),
+			'target' => '_blank',
+			'icon' => 'articles',
+			'framed' => false,
+			'title' => wfMessage( 'wikimirror-mirrored' )->plain()
+		] );
+
 		$output = $this->text->getParserOutput();
+		$output->setEnableOOUI( true );
+		$output->addModuleStyles( [ 'oojs-ui.styles.icons-content' ] );
+		$output->setIndicator( 'ext-wm-indicator-mirror', $mirrorIndicator );
 	}
 }

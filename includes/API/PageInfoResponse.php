@@ -91,6 +91,15 @@ class PageInfoResponse {
 	}
 
 	/**
+	 * Get URL for remote page
+	 *
+	 * @return string
+	 */
+	public function getUrl() {
+		return $this->mirror->getPageUrl( $this->getTitle()->getPrefixedDBkey() );
+	}
+
+	/**
 	 * Get text for the remote page
 	 *
 	 * @return ParseResponse

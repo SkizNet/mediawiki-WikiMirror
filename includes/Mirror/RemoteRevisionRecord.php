@@ -7,27 +7,20 @@ use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Revision\RevisionSlots;
 use MediaWiki\Revision\SlotRecord;
 use MWException;
-use Wikimedia\Rdbms\LoadBalancer;
 use WikiMirror\API\PageInfoResponse;
 
 class RemoteRevisionRecord extends RevisionRecord {
 	/** @var PageInfoResponse */
 	private $remoteData;
-	/** @var LoadBalancer */
-	private $loadBalancer;
-	/** @var array */
-	private $slotRoles = null;
 
 	/**
 	 * RemoteRevisionRecord constructor.
 	 *
 	 * @param PageInfoResponse $remoteData
-	 * @param LoadBalancer $loadBalancer
 	 * @throws MWException
 	 */
-	public function __construct( PageInfoResponse $remoteData, LoadBalancer $loadBalancer ) {
+	public function __construct( PageInfoResponse $remoteData ) {
 		$this->remoteData = $remoteData;
-		$this->loadBalancer = $loadBalancer;
 
 		$title = $remoteData->getTitle();
 		$slots = $this->getRemoteSlotRecords();
@@ -62,19 +55,10 @@ class RemoteRevisionRecord extends RevisionRecord {
 		$slots = [];
 		$revision = $this->remoteData->lastRevision;
 
-		if ( $this->slotRoles === null ) {
-			$this->loadSlotRoles();
-		}
-
 		foreach ( $revision->slots as $slot ) {
-			if ( !array_key_exists( $slot, $this->slotRoles ) ) {
-				// unrecognized slot role, skip over it
-				continue;
-			}
-
 			$row = (object)[
 				'slot_revision_id' => $revision->revisionId,
-				'slot_role_id' => $this->slotRoles[$slot],
+				'slot_role_id' => 0,
 				'slot_content_id' => 0,
 				'slot_origin' => $revision->revisionId,
 				'content_id' => 0,
@@ -83,7 +67,7 @@ class RemoteRevisionRecord extends RevisionRecord {
 				'content_model' => 0,
 				'content_address' => null,
 				'model_name' => $revision->getSlotContentModel( $slot ),
-				'role_id' => $this->slotRoles[$slot],
+				'role_id' => 0,
 				'role_name' => $slot
 			];
 
@@ -98,21 +82,9 @@ class RemoteRevisionRecord extends RevisionRecord {
 	 *
 	 * @param SlotRecord $record Remote slot record
 	 * @return Content Content of slot
+	 * @throws MWException
 	 */
 	public function getRemoteSlotContent( SlotRecord $record ) {
 		return new MirrorContent( $this->remoteData );
-	}
-
-	/**
-	 * Loads data from the slot_roles table into a cache for future reference.
-	 */
-	private function loadSlotRoles() {
-		$db = $this->loadBalancer->getConnection( DB_REPLICA );
-		$res = $db->select( 'slot_roles', [ 'role_id', 'role_name' ], '', __METHOD__ );
-		$this->slotRoles = [];
-
-		foreach ( $res as $row ) {
-			$this->slotRoles[$row->role_name] = $row->role_id;
-		}
 	}
 }

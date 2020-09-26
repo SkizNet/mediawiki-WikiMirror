@@ -4,9 +4,13 @@
 			"Ryan Schmidt"
 		]
 	},
+	"right-fork": "Create local copies of mirrored pages",
+	"wikimirror-action-fork": "Fork",
 	"wikimirror-config-remote": "Interwiki prefix of the remote wiki",
 	"wikimirror-desc": "Mirror and fork remote wiki articles",
 	"wikimirror-extensionname": "WikiMirror",
-	"wikimirror-fork": "Fork",
+	"wikimirror-mirrored": "This page is being mirrored from another wiki. Click here to view the remote page.",
+	"wikimirror-no-action": "You may not perform this action on a mirrored page.",
+	"wikimirror-no-edit": "You may not edit a mirrored page; it must be forked first.",
 	"wikimirror-no-mirror": "Unable to mirror $1. It may not exist on the remote wiki or may be a sensitive page."
 }

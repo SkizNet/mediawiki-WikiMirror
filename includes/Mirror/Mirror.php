@@ -55,6 +55,19 @@ class Mirror {
 	}
 
 	/**
+	 * Retrieve remote URL (for end user viewing) of the given title.
+	 *
+	 * @param string $title
+	 * @return string
+	 */
+	public function getPageUrl( string $title ) {
+		$remoteWiki = $this->options->get( 'WikiMirrorRemote' );
+		$interwiki = $this->interwikiLookup->fetch( $remoteWiki );
+
+		return $interwiki->getURL( $title );
+	}
+
+	/**
 	 * Retrieve cached page information, refreshing the cache as necessary.
 	 * The data is cached for $wgTranscludeCacheExpiry time, although stale data
 	 * may be returned if we are unable to contact the remote wiki.
@@ -63,6 +76,10 @@ class Mirror {
 	 * @return Status On success, page data from remote API as a PageInfoResponse
 	 */
 	public function getCachedPage( Title $title ) {
+		if ( !$title->isValid() ) {
+			return Status::newFatal( 'wikimirror-no-mirror', $title->getPrefixedText() );
+		}
+
 		$id = hash( 'sha256', $title->getPrefixedText() );
 		$pageName = $title->getPrefixedText();
 		wfDebugLog( 'WikiMirror', "Retrieving cached info for {$pageName}." );
@@ -316,6 +333,13 @@ class Mirror {
 		}
 
 		$data = json_decode( $res, true );
+
+		if ( isset( $data['query']['interwiki'] ) ) {
+			// cache the failure since there's no reason to query for an interwiki multiple times.
+			wfDebug( "{$title->getPrefixedText()} is an interwiki on remote mirror." );
+			return null;
+		}
+
 		if ( $data['query']['pageids'][0] == '-1' ) {
 			// == instead of === is intentional; right now the API returns a string for the page id
 			// but I'd rather not rely on that behavior. This lets the -1 be coerced to int if required.
@@ -336,6 +360,6 @@ class Mirror {
 	 * @return bool True if the title can be mirrored, false if not.
 	 */
 	public function canMirror( Title $title ) {
-		return !$title->exists() && $this->getCachedPage( $title )->isOK();
+		return ( !$title->exists() || !$title->getLatestRevID() ) && $this->getCachedPage( $title )->isOK();
 	}
 }

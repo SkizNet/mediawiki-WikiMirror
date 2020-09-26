@@ -39,6 +39,7 @@ class WikiRemotePage extends WikiPage {
 			$pageData = $status->getValue();
 			$row = (object)[
 				// we need to trick mediawiki into thinking this page exists locally
+				// this makes canMirror checks a bit trickier however as we can't rely on $title->exists()
 				'page_id' => $pageData->pageId,
 				'page_namespace' => $this->mTitle->getNamespace(),
 				'page_title' => $this->mTitle->getDBkey(),
@@ -49,7 +50,7 @@ class WikiRemotePage extends WikiPage {
 				'page_links_updated' => null,
 				'page_latest' => 0,
 				'page_len' => $pageData->length,
-				'page_content_model' => $pageData->contentModel,
+				'page_content_model' => 'mirror',
 				'page_lang' => $pageData->pageLanguage
 			];
 		}
@@ -72,10 +73,8 @@ class WikiRemotePage extends WikiPage {
 		/** @var PageInfoResponse $revData */
 		$revData = $status->getValue();
 
-		// Annoyingly setLastEdit and getDBLoadBalancer are marked as private instead of protected in WikiPage.
-		/** @var LoadBalancer $loadBalancer */
-		$loadBalancer = $this->callPrivateMethod( WikiPage::class, 'getDBLoadBalancer', $this );
-		$revision = new RemoteRevisionRecord( $revData, $loadBalancer );
+		$revision = new RemoteRevisionRecord( $revData );
+		// Annoyingly setLastEdit is marked as private instead of protected in WikiPage.
 		$this->callPrivateMethod( WikiPage::class, 'setLastEdit', $this, [ $revision ] );
 	}
 
