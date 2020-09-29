@@ -6,7 +6,6 @@ use MediaWiki\MediaWikiServices;
 use MWException;
 use ReflectionClass;
 use ReflectionException;
-use Wikimedia\Rdbms\LoadBalancer;
 use WikiMirror\API\PageInfoResponse;
 use WikiPage;
 

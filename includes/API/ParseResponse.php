@@ -53,8 +53,16 @@ class ParseResponse {
 		$this->moduleStyles = $response['modulestyles'];
 		$this->jsConfigVars = $response['jsconfigvars'];
 		$this->wikitext = $response['wikitext']['*'];
-		$this->languageLinks = $response['langlinks'];
-		$this->categoryLinks = $response['categories'];
+
+		$this->languageLinks = [];
+		foreach ( $response['langlinks'] as $languageLink ) {
+			$this->languageLinks[] = $languageLink['lang'] . ':' . $languageLink['*'];
+		}
+
+		$this->categoryLinks = [];
+		foreach ( $response['categories'] as $category ) {
+			$this->categoryLinks[$category['*']] = $category['sortkey'];
+		}
 
 		$this->indicators = [];
 		foreach ( $response['indicators'] as $indicator ) {

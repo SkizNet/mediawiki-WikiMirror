@@ -19,23 +19,22 @@
 		}
 	},
 	"Hooks": {
-		"getUserPermissionsErrors": "wikimirror-mirror",
-		"MediaWikiServices": "wikimirror-service",
-		"SkinTemplateNavigation::Universal": "wikimirror-mirror",
-		"TitleIsAlwaysKnown": "wikimirror-mirror",
-		"WikiPageFactory": "wikimirror-mirror"
+		"getUserPermissionsErrors": "mirror",
+		"MediaWikiServices": "service",
+		"SkinTemplateNavigation::Universal": "mirror",
+		"TitleIsAlwaysKnown": "mirror",
+		"WikiPageFactory": "mirror"
 	},
 	"HookHandlers": {
-		"wikimirror-mirror": {
+		"mirror": {
 			"class": "WikiMirror\\Mirror\\Hooks",
 			"services": [
 				"Mirror",
 				"PermissionManager"
 			]
 		},
-		"wikimirror-service": {
-			"class": "WikiMirror\\Service\\Hooks",
-			"services": []
+		"service": {
+			"class": "WikiMirror\\Service\\Hooks"
 		}
 	},
 	"MessagesDirs": {

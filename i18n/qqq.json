@@ -1,0 +1,16 @@
+{
+	"@metadata": {
+		"authors": [
+			"Ryan Schmidt"
+		]
+	},
+	"right-fork": "{{doc-right|fork}}",
+	"wikimirror-action-fork": "Text displayed in the tab which allows users to make a local copy of a mirrored page for editing.",
+	"wikimirror-config-remote": "{{optional}} Description of the configuration variable $wgWikiMirrorRemote. This message is not exposed to users.",
+	"wikimirror-desc": "{{desc|name=WikiMirror|url=https://www.mediawiki.org/wiki/Extension:WikiMirror}}",
+	"wikimirror-extensionname": "{{name}}",
+	"wikimirror-mirrored": "Hover text for the icon displayed at the top right of mirrored pages. Clicking the icon takes the user to the remote site.",
+	"wikimirror-no-action": "Message displayed to users when they attempt to perform a disallowed action with a mirrored page, such as protection or moving.",
+	"wikimirror-no-edit": "Message displayed to users when they click View Source to view the wikitext of a mirrored page.",
+	"wikimirror-no-mirror": "{{optional}} Error message added to server logs when an error is encountered. This message is not exposed to users. $1 is the name of the page."
+}
