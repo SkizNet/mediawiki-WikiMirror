@@ -353,6 +353,52 @@ class Mirror {
 		return $data['query']['pages'][$data['query']['pageids'][0]];
 	}
 
+	public function getNamespaceMap() {
+		$remoteWiki = $this->options->get( 'WikiMirrorRemote' );
+		if ( $remoteWiki === null ) {
+			// no remote wiki configured, so we can't mirror anything
+			wfLogWarning( '$wgWikiMirrorRemote not configured.' );
+			return false;
+		}
+
+		$interwiki = $this->interwikiLookup->fetch( $remoteWiki );
+		if ( $interwiki === null || $interwiki === false ) {
+			// invalid interwiki configuration
+			wfLogWarning( 'Invalid interwiki configuration for $wgWikiMirrorRemote.' );
+			return false;
+		}
+
+		$apiUrl = $interwiki->getAPI();
+		$params = [
+			'format' => 'json',
+			'action' => 'query',
+			'meta' => 'siteinfo',
+			'siprop' => 'namespaces|namespacealiases'
+		];
+
+		$res = $this->httpRequestFactory->get( wfAppendQuery( $apiUrl, $params ), [], __METHOD__ );
+
+		if ( $res === null ) {
+			// API error
+			wfWarn( 'Error with remote mirror API meta=siteinfo for namespaces.' );
+			return false;
+		}
+
+		$data = json_decode( $res, true );
+		$namespaces = [];
+		foreach ( $data['query']['namespaces'] as $ns => $nsData ) {
+			$nsKey = str_replace( ' ', '_', $nsData['*'] );
+			$namespaces[$nsKey] = intval( $ns );
+		}
+
+		foreach ( $data['query']['namespacealiases'] as $ns => $nsData ) {
+			$nsKey = str_replace( ' ', '_', $nsData['*'] );
+			$namespaces[$nsKey] = intval( $ns );
+		}
+
+		return $namespaces;
+	}
+
 	/**
 	 * Determine whether or not the given title is eligible to be mirrored.
 	 *

@@ -20,12 +20,16 @@
 	},
 	"Hooks": {
 		"getUserPermissionsErrors": "mirror",
+		"LoadExtensionSchemaUpdates": "database",
 		"MediaWikiServices": "service",
 		"SkinTemplateNavigation::Universal": "mirror",
 		"TitleIsAlwaysKnown": "mirror",
 		"WikiPageFactory": "mirror"
 	},
 	"HookHandlers": {
+		"database": {
+			"class": "WikiMirror\\Database\\Hooks"
+		},
 		"mirror": {
 			"class": "WikiMirror\\Mirror\\Hooks",
 			"services": [

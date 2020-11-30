@@ -1,8 +1,9 @@
 <?php
 
-namespace WikiMirror\Mirror;
-
+/** @noinspection PhpMissingParamTypeInspection */
 // phpcs:disable MediaWiki.NamingConventions.LowerCamelFunctionsName.FunctionName
+
+namespace WikiMirror\Mirror;
 
 use MediaWiki\Hook\SkinTemplateNavigation__UniversalHook;
 use MediaWiki\Hook\TitleIsAlwaysKnownHook;

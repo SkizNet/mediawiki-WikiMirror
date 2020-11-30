@@ -1,5 +1,8 @@
 <?php
 
+/** @noinspection PhpMissingParamTypeInspection */
+// phpcs:disable MediaWiki.NamingConventions.LowerCamelFunctionsName.FunctionName
+
 namespace WikiMirror\Service;
 
 use MediaWiki\Hook\MediaWikiServicesHook;
