@@ -14,7 +14,19 @@ class MirrorContentHandler extends TextContentHandler {
 		parent::__construct( $modelId, [ CONTENT_FORMAT_WIKITEXT ] );
 	}
 
+	/**
+	 * @inheritDoc
+	 */
 	public function supportsRedirects() {
 		return true;
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function getActionOverrides() {
+		return [
+			'history' => HistoryAction::class
+		];
 	}
 }

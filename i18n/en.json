@@ -10,6 +10,7 @@
 	"wikimirror-config-remote": "Interwiki prefix of the remote wiki",
 	"wikimirror-desc": "Mirror and fork remote wiki articles",
 	"wikimirror-extensionname": "WikiMirror",
+	"wikimirror-mirror-history": "This page is being mirrored from another wiki. [$1 Click here to view the page history on the remote wiki.]",
 	"wikimirror-mirrored": "This page is being mirrored from another wiki. Click here to view the remote page.",
 	"wikimirror-no-action": "You may not perform this action on a mirrored page.",
 	"wikimirror-no-edit": "You may not edit a mirrored page; it must be forked first.",

@@ -226,7 +226,7 @@ namespace WikiMirror\Maintenance {
 					list( $nsId, $title ) = explode( "\t", $line );
 					$db->insert( 'remote_page', [
 						'rp_namespace' => $nsId,
-						'rp_title' => $title,
+						'rp_title' => trim( $title ),
 						'rp_updated' => $now
 					], __METHOD__ );
 

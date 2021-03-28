@@ -5,6 +5,8 @@
 
 namespace WikiMirror\Mirror;
 
+use Article;
+use IContextSource;
 use MediaWiki\Hook\SkinTemplateNavigation__UniversalHook;
 use MediaWiki\Hook\TitleIsAlwaysKnownHook;
 use MediaWiki\Page\Hook\WikiPageFactoryHook;
@@ -17,6 +19,7 @@ use SpecialPage;
 use Title;
 use User;
 use Wikimedia\Rdbms\ILoadBalancer;
+use WikiMirror\API\PageInfoResponse;
 use WikiPage;
 
 class Hooks implements
