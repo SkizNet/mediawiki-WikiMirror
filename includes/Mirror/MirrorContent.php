@@ -33,6 +33,13 @@ class MirrorContent extends TextContent {
 	/**
 	 * @inheritDoc
 	 */
+	public function getRedirectTarget() {
+		return $this->pageInfo->redirect;
+	}
+
+	/**
+	 * @inheritDoc
+	 */
 	protected function getHtml() {
 		return $this->text->html;
 	}
@@ -55,9 +62,14 @@ class MirrorContent extends TextContent {
 			'title' => wfMessage( 'wikimirror-mirrored' )->plain()
 		] );
 
+		$modules = [ 'oojs-ui.styles.icons-content' ];
+		if ( $this->getRedirectTarget() !== null ) {
+			$modules[] = 'mediawiki.action.view.redirectPage';
+		}
+
 		$output = $this->text->getParserOutput();
 		$output->setEnableOOUI( true );
-		$output->addModuleStyles( [ 'oojs-ui.styles.icons-content' ] );
+		$output->addModuleStyles( $modules );
 		$output->setIndicator( 'ext-wm-indicator-mirror', $mirrorIndicator );
 	}
 }

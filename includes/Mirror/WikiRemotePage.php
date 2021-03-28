@@ -78,6 +78,24 @@ class WikiRemotePage extends WikiPage {
 	}
 
 	/**
+	 * @inheritDoc
+	 * @throws MWException On error
+	 */
+	public function getRedirectTarget() {
+		/** @var Mirror $mirror */
+		$mirror = MediaWikiServices::getInstance()->get( 'Mirror' );
+		$status = $mirror->getCachedPage( $this->mTitle );
+		if ( !$status->isOK() ) {
+			throw new MWException( $status->getMessage() );
+		}
+
+		/** @var PageInfoResponse $pageData */
+		$pageData = $status->getValue();
+
+		return $pageData->redirect;
+	}
+
+	/**
 	 * Call a private method via Reflection
 	 *
 	 * @param string $class Class name

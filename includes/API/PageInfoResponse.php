@@ -71,6 +71,12 @@ class PageInfoResponse {
 		if ( array_key_exists( 'redirect', $response ) && $response['redirect'] ) {
 			// convert to db key form
 			$title = str_replace( ' ', '_', $response['links'][0]['title'] );
+			// strip namespace prefix if any
+			if ( $response['links'][0]['ns'] !== 0 ) {
+				$parts = explode( ':', $title, 2 );
+				$title = $parts[1];
+			}
+
 			$this->redirect = Title::makeTitleSafe( $response['links'][0]['ns'], $title );
 		} else {
 			$this->redirect = null;

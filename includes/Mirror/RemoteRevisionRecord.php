@@ -17,7 +17,6 @@ class RemoteRevisionRecord extends RevisionRecord {
 	 * RemoteRevisionRecord constructor.
 	 *
 	 * @param PageInfoResponse $remoteData
-	 * @throws MWException
 	 */
 	public function __construct( PageInfoResponse $remoteData ) {
 		$this->remoteData = $remoteData;
