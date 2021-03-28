@@ -10,6 +10,7 @@ use Title;
 use WANObjectCache;
 use WikiMirror\API\PageInfoResponse;
 use WikiMirror\API\ParseResponse;
+use WikiMirror\API\SiteInfoResponse;
 
 class Mirror {
 	/** @var string[] */
@@ -148,24 +149,22 @@ class Mirror {
 	 * [
 	 *    "title" => "Page title",
 	 *    "pageid" => 1234,
-	 *    "text" => [
-	 *      "*" => "Rendered HTML of page"
-	 *    ],
+	 *    "text" => "Rendered HTML of page"
 	 *    "langlinks" => [
 	 *      [
 	 *        "lang" => "de",
 	 *        "url" => "URL of remote language page",
 	 *        "langname" => "German",
 	 *        "autonym" => "Not sure what this is",
-	 *        "*" => "Name of remote language page"
+	 *        "title" => "Name of remote language page"
 	 *      ],
 	 *      ...
 	 *    ],
 	 *    "categories" => [
 	 *      [
 	 *        "sortkey" => "Sort key or empty string",
-	 *        "hidden" => "", // omitted if category is not hidden
-	 *        "*" => "Category db key (unprefixed)"
+	 *        "hidden" => true, // omitted if category is not hidden
+	 *        "category" => "Category db key (unprefixed)"
 	 *      ],
 	 *      ...
 	 *    ],
@@ -186,20 +185,12 @@ class Mirror {
 	 *      ...
 	 *    ],
 	 *    "indicators" => [
-	 *      [
-	 *        "name" => "featured-star",
-	 *        "*" => "HTML of indicator"
-	 *      ],
+	 *      "Indicator name" => "Indicator HTML",
 	 *      ...
 	 *    ],
-	 *    "wikitext" => [
-	 *      "*" => "Wikitext"
-	 *    ],
+	 *    "wikitext" => "Wikitext",
 	 *    "properties" => [
-	 *      [
-	 *        "name" => "displaytitle",
-	 *        "*" => "Property value"
-	 *      ],
+	 *      "Property name" => "Property value",
 	 *      ...
 	 *    ]
 	 * ]
@@ -225,6 +216,7 @@ class Mirror {
 		$apiUrl = $interwiki->getAPI();
 		$params = [
 			'format' => 'json',
+			'formatversion' => 2,
 			'action' => 'parse',
 			'oldid' => $pageInfo->lastRevisionId,
 			'prop' => 'text|langlinks|categories|modules|jsconfigvars|indicators|wikitext|properties',
@@ -262,7 +254,7 @@ class Mirror {
 	 *   "touched" => "2020-07-23T13:18:52Z",
 	 *   "lastrevid" => 5875,
 	 *   "length" => 23,
-	 *   "redirect" => "",
+	 *   "redirect" => true,
 	 *   "displaytitle" => "Main Page"
 	 * ]
 	 * @endcode
@@ -312,6 +304,7 @@ class Mirror {
 		$apiUrl = $interwiki->getAPI();
 		$params = [
 			'format' => 'json',
+			'formatversion' => 2,
 			'action' => 'query',
 			'prop' => 'info|revisions|links',
 			'indexpageids' => 1,
@@ -350,10 +343,43 @@ class Mirror {
 
 		// have an actual page id, which means the title exists on the remote
 		// cache the API response so we have the data available for future calls on the same title
-		return $data['query']['pages'][$data['query']['pageids'][0]];
+		return $data['query']['pages'][0];
 	}
 
-	public function getNamespaceMap() {
+	/**
+	 * Retrieve meta information about the remote wiki, potentially from cache.
+	 *
+	 * @return Status
+	 */
+	public function getCachedSiteInfo() {
+		wfDebugLog( 'WikiMirror', "Retrieving cached site info." );
+		$value = $this->cache->getWithSetCallback(
+			$this->cache->makeKey( 'mirror', 'remote-site-info' ),
+			$this->options->get( 'TranscludeCacheExpiry' ),
+			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) {
+				wfDebugLog( 'WikiMirror', "Site info not found in cache." );
+				return $this->getLiveSiteInfo();
+			},
+			[
+				'pcTTL' => $this->cache::TTL_PROC_LONG,
+				'pcGroup' => self::PC_GROUP,
+				'staleTTL' => $this->cache::TTL_DAY
+			]
+		);
+
+		if ( !$value ) {
+			return Status::newFatal( 'wikimirror-api-error' );
+		}
+
+		return Status::newGood( new SiteInfoResponse( $this, $value ) );
+	}
+
+	/**
+	 * Retrieve meta information about the remote wiki.
+	 *
+	 * @return false|array
+	 */
+	private function getLiveSiteInfo() {
 		$remoteWiki = $this->options->get( 'WikiMirrorRemote' );
 		if ( $remoteWiki === null ) {
 			// no remote wiki configured, so we can't mirror anything
@@ -371,32 +397,23 @@ class Mirror {
 		$apiUrl = $interwiki->getAPI();
 		$params = [
 			'format' => 'json',
+			'formatversion' => 2,
 			'action' => 'query',
 			'meta' => 'siteinfo',
-			'siprop' => 'namespaces|namespacealiases'
+			'siprop' => 'general|namespaces|namespacealiases'
 		];
 
 		$res = $this->httpRequestFactory->get( wfAppendQuery( $apiUrl, $params ), [], __METHOD__ );
 
 		if ( $res === null ) {
 			// API error
-			wfWarn( 'Error with remote mirror API meta=siteinfo for namespaces.' );
+			wfWarn( 'Error with remote mirror API meta=siteinfo.' );
 			return false;
 		}
 
 		$data = json_decode( $res, true );
-		$namespaces = [];
-		foreach ( $data['query']['namespaces'] as $ns => $nsData ) {
-			$nsKey = str_replace( ' ', '_', $nsData['*'] );
-			$namespaces[$nsKey] = intval( $ns );
-		}
 
-		foreach ( $data['query']['namespacealiases'] as $ns => $nsData ) {
-			$nsKey = str_replace( ' ', '_', $nsData['*'] );
-			$namespaces[$nsKey] = intval( $ns );
-		}
-
-		return $namespaces;
+		return $data['query'];
 	}
 
 	/**

@@ -3,8 +3,8 @@
 namespace WikiMirror\API;
 
 use MWException;
-use WikiMirror\Mirror\Mirror;
 use Title;
+use WikiMirror\Mirror\Mirror;
 
 /**
  * Wrapper around MediaWiki's API action=query&prop=info response
@@ -68,7 +68,7 @@ class PageInfoResponse {
 			$this->lastRevision = null;
 		}
 
-		if ( array_key_exists( 'redirect', $response ) && array_key_exists( 'links', $response ) ) {
+		if ( array_key_exists( 'redirect', $response ) && $response['redirect'] ) {
 			// convert to db key form
 			$title = str_replace( ' ', '_', $response['links'][0]['title'] );
 			$this->redirect = Title::makeTitleSafe( $response['links'][0]['ns'], $title );

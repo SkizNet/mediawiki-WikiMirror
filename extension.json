@@ -34,7 +34,8 @@
 			"class": "WikiMirror\\Mirror\\Hooks",
 			"services": [
 				"Mirror",
-				"PermissionManager"
+				"PermissionManager",
+				"DBLoadBalancer"
 			]
 		},
 		"service": {

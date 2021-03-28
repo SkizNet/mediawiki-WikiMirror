@@ -3,7 +3,7 @@
 namespace WikiMirror\Service;
 
 use IDBAccessObject;
-use MediaWiki\Linker\LinkTarget;
+use MediaWiki\Page\PageIdentity;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
 use MWException;
@@ -39,8 +39,8 @@ class RevisionLookupManipulator implements RevisionLookup {
 	/**
 	 * @inheritDoc
 	 */
-	public function getRevisionByTitle( LinkTarget $linkTarget, $revId = 0, $flags = 0 ) {
-		return $this->revisionLookup->getRevisionByTitle( $linkTarget, $revId, $flags );
+	public function getRevisionByTitle( $page, $revId = 0, $flags = 0 ) {
+		return $this->revisionLookup->getRevisionByTitle( $page, $revId, $flags );
 	}
 
 	/**
@@ -54,11 +54,11 @@ class RevisionLookupManipulator implements RevisionLookup {
 	 * @inheritDoc
 	 */
 	public function getRevisionByTimestamp(
-		LinkTarget $title,
+		$page,
 		string $timestamp,
 		int $flags = RevisionLookup::READ_NORMAL
 	): ?RevisionRecord {
-		return $this->revisionLookup->getRevisionByTimestamp( $title, $timestamp, $flags );
+		return $this->revisionLookup->getRevisionByTimestamp( $page, $timestamp, $flags );
 	}
 
 	/**
@@ -86,7 +86,15 @@ class RevisionLookupManipulator implements RevisionLookup {
 	 * @inheritDoc
 	 * @throws MWException
 	 */
-	public function getKnownCurrentRevision( Title $title, $revId = 0 ) {
+	public function getKnownCurrentRevision( $page, $revId = 0 ) {
+		if ( $page instanceof PageIdentity ) {
+			// 1.36+
+			$title = Title::newFromDBkey( $page->getDBkey() );
+		} else {
+			// 1.35
+			$title = $page;
+		}
+
 		if ( !$revId && $this->mirror->canMirror( $title ) ) {
 			$status = $this->mirror->getCachedPage( $title );
 			if ( $status->isOK() ) {
@@ -94,16 +102,16 @@ class RevisionLookupManipulator implements RevisionLookup {
 			}
 		}
 
-		return $this->revisionLookup->getKnownCurrentRevision( $title, $revId );
+		return $this->revisionLookup->getKnownCurrentRevision( $page, $revId );
 	}
 
 	/**
 	 * @inheritDoc
 	 */
 	public function getFirstRevision(
-		LinkTarget $title,
+		$page,
 		int $flags = IDBAccessObject::READ_NORMAL
 	): ?RevisionRecord {
-		return $this->revisionLookup->getFirstRevision( $title, $flags );
+		return $this->revisionLookup->getFirstRevision( $page, $flags );
 	}
 }

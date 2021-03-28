@@ -6,6 +6,7 @@
 	},
 	"right-fork": "{{doc-right|fork}}",
 	"wikimirror-action-fork": "Text displayed in the tab which allows users to make a local copy of a mirrored page for editing.",
+	"wikimirror-api-error": "{{optional}} Error message added to server logs when an error is encountered. This message is not exposed to users.",
 	"wikimirror-config-remote": "{{optional}} Description of the configuration variable $wgWikiMirrorRemote. This message is not exposed to users.",
 	"wikimirror-desc": "{{desc|name=WikiMirror|url=https://www.mediawiki.org/wiki/Extension:WikiMirror}}",
 	"wikimirror-extensionname": "{{name}}",

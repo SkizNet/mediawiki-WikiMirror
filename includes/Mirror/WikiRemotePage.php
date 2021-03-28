@@ -82,6 +82,7 @@ class WikiRemotePage extends WikiPage {
 	 *
 	 * @param string $class Class name
 	 * @param string $method Method name
+	 * @phpcs:ignore MediaWiki.Commenting.FunctionComment.ObjectTypeHintParam
 	 * @param object|null $object Object to call method on, or null for a static method
 	 * @param array $args Arguments to method
 	 * @return mixed Return value of method called

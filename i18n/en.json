@@ -6,6 +6,7 @@
 	},
 	"right-fork": "Create local copies of mirrored pages",
 	"wikimirror-action-fork": "Fork",
+	"wikimirror-api-error": "An unrecoverable error has occurred with the remote wiki's API.",
 	"wikimirror-config-remote": "Interwiki prefix of the remote wiki",
 	"wikimirror-desc": "Mirror and fork remote wiki articles",
 	"wikimirror-extensionname": "WikiMirror",

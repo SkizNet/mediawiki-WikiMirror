@@ -3,6 +3,7 @@
 namespace WikiMirror\API;
 
 use ParserOutput;
+use Title;
 use WikiMirror\Mirror\Mirror;
 
 class ParseResponse {
@@ -32,6 +33,8 @@ class ParseResponse {
 	public $properties;
 	/** @var PageInfoResponse */
 	private $pageInfo;
+	/** @var SiteInfoResponse */
+	private $siteInfo;
 	/** @var Mirror */
 	private $mirror;
 
@@ -47,32 +50,25 @@ class ParseResponse {
 		$this->pageInfo = $pageInfo;
 		$this->title = $response['title'];
 		$this->pageId = $response['pageid'];
-		$this->html = $response['text']['*'];
 		$this->modules = $response['modules'];
 		$this->moduleScripts = $response['modulescripts'];
 		$this->moduleStyles = $response['modulestyles'];
 		$this->jsConfigVars = $response['jsconfigvars'];
-		$this->wikitext = $response['wikitext']['*'];
+		$this->wikitext = $response['wikitext'];
+		$this->indicators = $response['indicators'];
+		$this->properties = $response['properties'];
 
 		$this->languageLinks = [];
 		foreach ( $response['langlinks'] as $languageLink ) {
-			$this->languageLinks[] = $languageLink['lang'] . ':' . $languageLink['*'];
+			$this->languageLinks[] = $languageLink['lang'] . ':' . $languageLink['title'];
 		}
 
 		$this->categoryLinks = [];
 		foreach ( $response['categories'] as $category ) {
-			$this->categoryLinks[$category['*']] = $category['sortkey'];
+			$this->categoryLinks[$category['category']] = $category['sortkey'];
 		}
 
-		$this->indicators = [];
-		foreach ( $response['indicators'] as $indicator ) {
-			$this->indicators[$indicator['name']] = $indicator['*'];
-		}
-
-		$this->properties = [];
-		foreach ( $response['properties'] as $property ) {
-			$this->properties[$property['name']] = $property['*'];
-		}
+		$this->html = $this->fixLocalLinks( $response['text'] );
 	}
 
 	/**
@@ -100,5 +96,71 @@ class ParseResponse {
 		}
 
 		return $output;
+	}
+
+	/**
+	 * Fixes local links to conform to our own article/action paths.
+	 *
+	 * @param string $html
+	 * @return string
+	 */
+	private function fixLocalLinks( $html ) {
+		$status = $this->mirror->getCachedSiteInfo();
+		if ( !$status->isOK() ) {
+			return $html;
+		}
+
+		/** @var SiteInfoResponse $siteInfo */
+		$siteInfo = $status->getValue();
+
+		// remap remote article path to local article path
+		// we support remote $wgMainPageIsDomainRoot but do not support remote $wgActionPaths or $wgVariantArticlePath
+		// (local versions of the above are all supported as we go through Title to generate the new URL)
+		$remotePathInfo = wfParseUrl( $siteInfo->server . $siteInfo->articlePath );
+		$inPath = isset( $remotePathInfo['path'] ) && strpos( $remotePathInfo['path'], '$1' ) !== false;
+		$queryKey = null;
+		if ( !$inPath && isset( $remotePathInfo['query'] ) ) {
+			$remotePathInfo['query'] = wfCgiToArray( $remotePathInfo['query'] );
+			foreach ( $remotePathInfo['query'] as $key => $value ) {
+				if ( $value === '$1' ) {
+					$queryKey = $key;
+					break;
+				}
+			}
+		}
+
+		if ( $inPath ) {
+			$titleMatch = '([^"?]*)';
+		} else {
+			$titleMatch = '([^"&]*)';
+		}
+
+		$regex = preg_quote( $siteInfo->articlePath, '#' );
+		$regex = '#<a href="(' . str_replace( '\\$1', $titleMatch, $regex ) . '[^"]*?)"#';
+		return preg_replace_callback( $regex, function ( array $matches ) use ( $siteInfo, $queryKey ) {
+			$url = wfParseUrl( $siteInfo->server . html_entity_decode( $matches[1] ) );
+			if ( $url === false ) {
+				return $matches[0];
+			}
+
+			$query = [];
+			if ( isset( $url['query'] ) && $url['query'] !== '' ) {
+				$query = wfCgiToArray( $url['query'] );
+				unset( $query[$queryKey] );
+			}
+
+			$titleText = urldecode( $matches[2] );
+			if ( isset( $url['fragment'] ) && $url['fragment'] !== '' ) {
+				$titleText .= '#' . $url['fragment'];
+			}
+
+			$title = Title::newFromText( $titleText );
+			if ( $title === null ) {
+				return $matches[0];
+			}
+
+			$newUrl = $title->getLinkURL( $query );
+			return '<a href="' . htmlspecialchars( $newUrl ) . '"';
+		}, $html );
 	}
 }
