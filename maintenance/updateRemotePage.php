@@ -243,7 +243,15 @@ namespace WikiMirror\Maintenance {
 				// in the subprocesses, and we don't want to limit via cgroups, firejail, etc.
 				// passthru() does exactly what we want it to do, so use that directly
 				// phpcs:disable MediaWiki.Usage.ForbiddenFunctions.passthru
-				passthru( $command->getCommandString(), $exitCode );
+				if ( method_exists( $command, 'getCommandString' ) ) {
+					// 1.36+
+					$commandString = $command->getCommandString();
+				} else {
+					// 1.35
+					$commandString = substr( (string)$command, 10 );
+				}
+
+				passthru( $commandString, $exitCode );
 				if ( $exitCode !== 0 ) {
 					// subcommand failed, abort
 					$this->fatalError( 'Aborting data load due to subcommand failure.' );
