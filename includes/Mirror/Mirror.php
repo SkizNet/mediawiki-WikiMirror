@@ -15,6 +15,9 @@ use WikiMirror\API\SiteInfoResponse;
 class Mirror {
 	/** @var string[] */
 	public const CONSTRUCTOR_OPTIONS = [
+		'ArticlePath',
+		'ScriptPath',
+		'Server',
 		'TranscludeCacheExpiry',
 		'WikiMirrorRemote'
 	];
@@ -211,9 +214,6 @@ class Mirror {
 		/** @var PageInfoResponse $pageInfo */
 		$pageInfo = $status->getValue();
 
-		$remoteWiki = $this->options->get( 'WikiMirrorRemote' );
-		$interwiki = $this->interwikiLookup->fetch( $remoteWiki );
-		$apiUrl = $interwiki->getAPI();
 		$params = [
 			'format' => 'json',
 			'formatversion' => 2,
@@ -224,17 +224,7 @@ class Mirror {
 			'disableeditsection' => true
 		];
 
-		$res = $this->httpRequestFactory->get( wfAppendQuery( $apiUrl, $params ), [], __METHOD__ );
-
-		if ( $res === null ) {
-			// API error
-			wfWarn( "{$title->getPrefixedText()}: error with remote mirror API action=parse." );
-			return false;
-		}
-
-		$data = json_decode( $res, true );
-
-		return $data['parse'];
+		return $this->getRemoteApiResponse( $params, __METHOD__ );
 	}
 
 	/**
@@ -273,20 +263,6 @@ class Mirror {
 		//    pages are handled via InstantCommons instead of this extension.
 		// If any of these checks fail, we do not cache any values
 
-		$remoteWiki = $this->options->get( 'WikiMirrorRemote' );
-		if ( $remoteWiki === null ) {
-			// no remote wiki configured, so we can't mirror anything
-			wfLogWarning( '$wgWikiMirrorRemote not configured.' );
-			return false;
-		}
-
-		$interwiki = $this->interwikiLookup->fetch( $remoteWiki );
-		if ( $interwiki === null || $interwiki === false ) {
-			// invalid interwiki configuration
-			wfLogWarning( 'Invalid interwiki configuration for $wgWikiMirrorRemote.' );
-			return false;
-		}
-
 		if ( $title->isExternal()
 			|| $title->getNamespace() < 0
 			|| $title->getNamespace() === NS_MEDIAWIKI
@@ -301,7 +277,6 @@ class Mirror {
 		}
 
 		// check if the remote page exists
-		$apiUrl = $interwiki->getAPI();
 		$params = [
 			'format' => 'json',
 			'formatversion' => 2,
@@ -317,23 +292,15 @@ class Mirror {
 			'titles' => $title->getPrefixedText()
 		];
 
-		$res = $this->httpRequestFactory->get( wfAppendQuery( $apiUrl, $params ), [], __METHOD__ );
+		$data = $this->getRemoteApiResponse( $params, __METHOD__ );
 
-		if ( $res === null ) {
-			// API error
-			wfWarn( "{$title->getPrefixedText()}: error with remote mirror API action=query." );
-			return false;
-		}
-
-		$data = json_decode( $res, true );
-
-		if ( isset( $data['query']['interwiki'] ) ) {
+		if ( isset( $data['interwiki'] ) ) {
 			// cache the failure since there's no reason to query for an interwiki multiple times.
 			wfDebug( "{$title->getPrefixedText()} is an interwiki on remote mirror." );
 			return null;
 		}
 
-		if ( $data['query']['pageids'][0] == '-1' ) {
+		if ( $data['pageids'][0] == '-1' ) {
 			// == instead of === is intentional; right now the API returns a string for the page id
 			// but I'd rather not rely on that behavior. This lets the -1 be coerced to int if required.
 			// This indicates the page doesn't exist on the remote, so cache that failure result.
@@ -343,7 +310,7 @@ class Mirror {
 
 		// have an actual page id, which means the title exists on the remote
 		// cache the API response so we have the data available for future calls on the same title
-		return $data['query']['pages'][0];
+		return $data['pages'][0];
 	}
 
 	/**
@@ -380,6 +347,72 @@ class Mirror {
 	 * @return false|array
 	 */
 	private function getLiveSiteInfo() {
+		$params = [
+			'format' => 'json',
+			'formatversion' => 2,
+			'action' => 'query',
+			'meta' => 'siteinfo',
+			'siprop' => 'general|namespaces|namespacealiases'
+		];
+
+		return $this->getRemoteApiResponse( $params, __METHOD__ );
+	}
+
+	/**
+	 * Determine whether or not the given title is eligible to be mirrored.
+	 *
+	 * @param Title $title
+	 * @return bool True if the title can be mirrored, false if not.
+	 */
+	public function canMirror( Title $title ) {
+		return ( !$title->exists() || !$title->getLatestRevID() ) && $this->getCachedPage( $title )->isOK();
+	}
+
+	/**
+	 * Call remote VE API and retrieve the results from it.
+	 * This is not cached.
+	 *
+	 * @param array $params Params to pass through to remote API
+	 * @return array|false API response, or false on failure
+	 */
+	public function getVisualEditorApi( array $params ) {
+		$params['action'] = 'visualeditor';
+		$params['format'] = 'json';
+		$params['formatversion'] = 2;
+
+		$result = $this->getRemoteApiResponse( $params, __METHOD__ );
+		if ( $result !== false ) {
+			// fix <base> tag in $result['content']
+			$base = $this->options->get( 'Server' ) .
+				str_replace( '$1', '', $this->options->get( 'ArticlePath' ) );
+
+			$result['content'] = preg_replace(
+				'#<base href=".*?"#',
+				"<base href=\"{$base}\"",
+				$result['content']
+			);
+
+			// fix load.php URLs in $result['content']
+			$script = $this->options->get( 'ScriptPath' );
+			$result['content'] = preg_replace(
+				'#="[^"]*?/load.php#',
+				"=\"{$script}/load.php",
+				$result['content']
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Execute a remote API request
+	 *
+	 * @param array $params API params
+	 * @param string $caller Pass __METHOD__
+	 * @return false|array
+	 * @noinspection PhpSameParameterValueInspection
+	 */
+	private function getRemoteApiResponse( array $params, string $caller ) {
 		$remoteWiki = $this->options->get( 'WikiMirrorRemote' );
 		if ( $remoteWiki === null ) {
 			// no remote wiki configured, so we can't mirror anything
@@ -395,34 +428,17 @@ class Mirror {
 		}
 
 		$apiUrl = $interwiki->getAPI();
-		$params = [
-			'format' => 'json',
-			'formatversion' => 2,
-			'action' => 'query',
-			'meta' => 'siteinfo',
-			'siprop' => 'general|namespaces|namespacealiases'
-		];
-
-		$res = $this->httpRequestFactory->get( wfAppendQuery( $apiUrl, $params ), [], __METHOD__ );
+		$action = $params['action'];
+		$res = $this->httpRequestFactory->get( wfAppendQuery( $apiUrl, $params ), [], $caller );
 
 		if ( $res === null ) {
 			// API error
-			wfWarn( 'Error with remote mirror API meta=siteinfo.' );
+			wfWarn( "Error with remote mirror API action={$action}." );
 			return false;
 		}
 
 		$data = json_decode( $res, true );
 
-		return $data['query'];
-	}
-
-	/**
-	 * Determine whether or not the given title is eligible to be mirrored.
-	 *
-	 * @param Title $title
-	 * @return bool True if the title can be mirrored, false if not.
-	 */
-	public function canMirror( Title $title ) {
-		return ( !$title->exists() || !$title->getLatestRevID() ) && $this->getCachedPage( $title )->isOK();
+		return $data[$action];
 	}
 }

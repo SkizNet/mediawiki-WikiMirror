@@ -1,7 +1,7 @@
 {
 	"name": "WikiMirror",
 	"namemsg": "wikimirror-extensionname",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"author": [
 		"Ryan Schmidt"
 	],
@@ -19,6 +19,7 @@
 		}
 	},
 	"Hooks": {
+		"ApiMain::moduleManager": "api",
 		"getUserPermissionsErrors": "mirror",
 		"LoadExtensionSchemaUpdates": "database",
 		"MediaWikiServices": "service",
@@ -27,6 +28,9 @@
 		"WikiPageFactory": "mirror"
 	},
 	"HookHandlers": {
+		"api": {
+			"class": "WikiMirror\\API\\Hooks"
+		},
 		"database": {
 			"class": "WikiMirror\\Database\\Hooks"
 		},
