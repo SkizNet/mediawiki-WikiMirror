@@ -9,6 +9,7 @@ on:
       - master
 
 env:
+  EXTNAME: WikiMirror
   MW_INSTALL_PATH: ${{ github.workspace }}
 
 jobs:
@@ -32,22 +33,25 @@ jobs:
         with:
           repository: wikimedia/mediawiki
           ref: ${{ matrix.mediawiki }}
-      - name: Setup WikiMirror
+      - name: Setup Extension
         uses: actions/checkout@v2
         with:
-          path: extensions/WikiMirror
+          path: extensions/${{ env.EXTNAME }}
       - name: Setup Composer
         run: |
           echo '{"extra":{"merge-plugin":{"include":["extensions/*/composer.json","skins/*/composer.json"]}}}' > composer.local.json
-          composer install
+          composer update
           composer update
       - name: Install MediaWiki
         run: |
           php maintenance/install.php --dbtype sqlite --dbuser root --dbname mw --with-extensions --pass AdminPassword WikiName AdminUser
           echo 'require_once "$IP/includes/DevelopmentSettings.php";' >> LocalSettings.php
       - name: Lint
-        run: phplint -w extensions/WikiMirror
+        run: phplint -w extensions/${{ env.EXTNAME }}
+        continue-on-error: true
       - name: PHP Code Sniffer
         run: phpcs -sp --standard=vendor/mediawiki/mediawiki-codesniffer/MediaWiki extensions/${{ env.EXTNAME }}
+        continue-on-error: true
       - name: Phan
-        run: phan -d extensions/WikiMirror -k vendor/mediawiki/mediawiki-phan-config/src/config.php --long-progress-bar
+        run: phan -d extensions/${{ env.EXTNAME }} -k vendor/mediawiki/mediawiki-phan-config/src/config.php --long-progress-bar
+        continue-on-error: true
