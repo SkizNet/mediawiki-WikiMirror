@@ -1,0 +1,54 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+env:
+  EXTNAME: WikiMirror
+  MW_INSTALL_PATH: ${{ env.GITHUB_WORKSPACE }}
+
+jobs:
+  ci:
+    name: Main Test Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mediawiki: [REL1_35, master]
+        php: ['7.4']
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, intl, ast
+          coverage: none
+          tools: composer, phpcs, phan, phplint
+      - name: Setup MediaWiki
+        uses: actions/checkout@v2
+        with:
+          repo: wikimedia/mediawiki
+          ref: ${{ matrix.mediawiki }}
+      - name: Setup ${{ env.EXTNAME }}
+        uses: actions/checkout@v2
+        with:
+          path: extensions/${{ env.EXTNAME }}
+      - name: Setup Composer
+        run: |
+          echo '{"extra":{"merge-plugin":{"include":["extensions/*/composer.json","skins/*/composer.json"]}}}' > composer.local.json
+          composer install
+          composer update
+      - name: Install MediaWiki
+        run: |
+          php maintenance/install.php --dbtype sqlite --dbuser root --dbname mw --with-extensions --pass AdminPassword WikiName AdminUser
+          echo 'require_once "$IP/includes/DevelopmentSettings.php";' >> LocalSettings.php
+      - name: Lint
+        run: phplint -w extensions/${{ env.EXTNAME }}
+      - name: PHP Code Sniffer
+        run: phpcs -sp --standard=vendor/mediawiki/mediawiki-codesniffer/MediaWiki extensions/${{ env.EXTNAME }}
+      - name: Phan
+        run: phan -d extensions/${{ env.EXTNAME }} -k vendor/mediawiki/mediawiki-phan-config/src/config.php --long-progress-bar
