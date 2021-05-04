@@ -13,13 +13,14 @@ env:
   MW_INSTALL_PATH: ${{ github.workspace }}
 
 jobs:
-  ci:
+  build:
     name: Main Test Build
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        mediawiki: [REL1_35, master]
-        php: ['7.4']
+        os: [ ubuntu-latest ]
+        mediawiki: [ REL1_35, master ]
+        php: [ '7.4' ]
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -27,7 +28,6 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mbstring, intl, ast
           coverage: none
-          tools: composer, phpcs, phan, phplint
       - name: Setup MediaWiki
         uses: actions/checkout@v2
         with:
@@ -46,12 +46,65 @@ jobs:
         run: |
           php maintenance/install.php --dbtype sqlite --dbuser root --dbname mw --with-extensions --pass AdminPassword WikiName AdminUser
           echo 'require_once "$IP/includes/DevelopmentSettings.php";' >> LocalSettings.php
+      - name: Create Artifact
+        run: tar -cvf ${{ runner.temp }}/wiki.tar .
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.EXTNAME }}-${{ matrix.os }}-${{ matrix.php }}-${{ matrix.mediawiki }}-${{ github.sha }}
+          path: ${{ runner.temp }}/wiki.tar
+          retention-days: 1
+
+  style:
+    name: Code Style
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        mediawiki: [ master ]
+        php: [ '7.4' ]
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, intl, ast
+          coverage: none
+          tools: composer, phpcs, phplint
+      - name: Download Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ env.EXTNAME }}-${{ matrix.os }}-${{ matrix.php }}-${{ matrix.mediawiki }}-${{ github.sha }}
+      - name: Extract Artifact
+        run: tar -xvf wiki.tar
       - name: Lint
         run: phplint -w extensions/${{ env.EXTNAME }}
-        continue-on-error: true
       - name: PHP Code Sniffer
         run: phpcs -sp --standard=vendor/mediawiki/mediawiki-codesniffer/MediaWiki extensions/${{ env.EXTNAME }}
-        continue-on-error: true
+
+  security:
+    name: Static Analysis
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        mediawiki: [ master ]
+        php: [ '7.4' ]
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, intl, ast
+          coverage: none
+          tools: composer, phpcs, phplint
+      - name: Download Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ env.EXTNAME }}-${{ matrix.os }}-${{ matrix.php }}-${{ matrix.mediawiki }}-${{ github.sha }}
+      - name: Extract Artifact
+        run: tar -xvf wiki.tar
       - name: Phan
-        run: phan -d extensions/${{ env.EXTNAME }} -k vendor/mediawiki/mediawiki-phan-config/src/config.php --long-progress-bar
-        continue-on-error: true
+        run: phan -d extensions/${{ env.EXTNAME }} -k ${{ env.MW_INSTALL_PATH }}/vendor/mediawiki/mediawiki-phan-config/src/config.php --long-progress-bar
