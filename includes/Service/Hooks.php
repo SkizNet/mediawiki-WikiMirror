@@ -21,7 +21,7 @@ class Hooks	implements MediaWikiServicesHook {
 	 */
 	public function onMediaWikiServices( $services ) {
 		$services->addServiceManipulator( 'RevisionLookup',
-			function ( RevisionLookup $lookup, ServiceContainer $container ) {
+			static function ( RevisionLookup $lookup, ServiceContainer $container ) {
 				return new RevisionLookupManipulator( $lookup, $container->getService( 'Mirror' ) );
 			} );
 	}

@@ -5,7 +5,7 @@ use MediaWiki\MediaWikiServices;
 use WikiMirror\Mirror\Mirror;
 
 return [
-	'Mirror' => function ( MediaWikiServices $services ) : Mirror {
+	'Mirror' => static function ( MediaWikiServices $services ) : Mirror {
 		return new Mirror(
 			$services->getInterwikiLookup(),
 			$services->getHttpRequestFactory(),

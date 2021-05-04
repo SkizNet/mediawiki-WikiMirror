@@ -137,7 +137,7 @@ class ParseResponse {
 
 		$regex = preg_quote( $siteInfo->articlePath, '#' );
 		$regex = '#<a href="(' . str_replace( '\\$1', $titleMatch, $regex ) . '[^"]*?)"#';
-		return preg_replace_callback( $regex, function ( array $matches ) use ( $siteInfo, $queryKey ) {
+		return preg_replace_callback( $regex, static function ( array $matches ) use ( $siteInfo, $queryKey ) {
 			$url = wfParseUrl( $siteInfo->server . html_entity_decode( $matches[1] ) );
 			if ( $url === false ) {
 				return $matches[0];

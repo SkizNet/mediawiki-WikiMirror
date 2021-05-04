@@ -282,7 +282,7 @@ namespace WikiMirror\Maintenance {
 			}
 
 			try {
-				$db = $this->getDB( DB_MASTER );
+				$db = $this->getDB( DB_PRIMARY );
 
 				// write new data to db
 				$fh = gzopen( $path, 'rb' );
@@ -334,7 +334,7 @@ namespace WikiMirror\Maintenance {
 		 * @param string $ts Timestamp (in TS_MW format) of cutoff
 		 */
 		private function deleteStaleRecords( $ts ) {
-			$db = $this->getDB( DB_MASTER );
+			$db = $this->getDB( DB_PRIMARY );
 			$db->delete( 'remote_page', [
 				'rp_updated < ' . $ts
 			], __METHOD__ );
