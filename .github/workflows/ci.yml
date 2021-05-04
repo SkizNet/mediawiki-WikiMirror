@@ -10,7 +10,7 @@ on:
 
 env:
   EXTNAME: WikiMirror
-  MW_INSTALL_PATH: ${{ env.GITHUB_WORKSPACE }}
+  MW_INSTALL_PATH: ${{ github.workspace }}
 
 jobs:
   ci:
