@@ -20,6 +20,13 @@ class CurlHandler extends \GuzzleHttp\Handler\CurlHandler {
 		parent::__construct( $factoryOptions );
 	}
 
+	/**
+	 * Pass curl options up to Guzzle.
+	 *
+	 * @param RequestInterface $request
+	 * @param array $options
+	 * @return PromiseInterface
+	 */
 	public function __invoke( RequestInterface $request, array $options ): PromiseInterface {
 		$requestOptions = [];
 		if ( array_key_exists( 'curl', $options ) ) {

@@ -19,14 +19,14 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest ]
-        mediawiki: [ REL1_35, master ]
         php: [ '7.4' ]
+        mediawiki: [ REL1_35, master ]
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, intl, ast
+          extensions: mbstring, intl
           coverage: none
       - name: Setup MediaWiki
         uses: actions/checkout@v2
@@ -62,14 +62,14 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest ]
-        mediawiki: [ master ]
         php: [ '7.4' ]
+        mediawiki: [ REL1_35, master ]
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, intl, ast
+          extensions: mbstring, intl
           coverage: none
           tools: composer, phpcs, phplint
       - name: Download Artifact
@@ -90,8 +90,8 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest ]
-        mediawiki: [ master ]
         php: [ '7.4' ]
+        mediawiki: [ master ]
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -99,7 +99,7 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mbstring, intl, ast
           coverage: none
-          tools: composer, phpcs, phplint
+          tools: composer, phan
       - name: Download Artifact
         uses: actions/download-artifact@v2
         with:
@@ -107,4 +107,4 @@ jobs:
       - name: Extract Artifact
         run: tar -xvf wiki.tar
       - name: Phan
-        run: phan -d extensions/${{ env.EXTNAME }} -k ${{ env.MW_INSTALL_PATH }}/vendor/mediawiki/mediawiki-phan-config/src/config.php --long-progress-bar
+        run: phan -d extensions/${{ env.EXTNAME }} --minimum-target-php-version=7.3 -k ${{ env.MW_INSTALL_PATH }}/vendor/mediawiki/mediawiki-phan-config/src/config.php --long-progress-bar
