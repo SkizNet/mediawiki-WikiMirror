@@ -33,6 +33,13 @@ jobs:
         with:
           repository: wikimedia/mediawiki
           ref: ${{ matrix.mediawiki }}
+      - name: Setup VisualEditor
+        uses: actions/checkout@v2
+        with:
+          repository: wikimedia/mediawiki-extensions-VisualEditor
+          ref: ${{ matrix.mediawiki }}
+          path: extensions/VisualEditor
+          submodules: true
       - name: Setup Extension
         uses: actions/checkout@v2
         with:
@@ -110,3 +117,16 @@ jobs:
         run: tar -xvf wiki.tar
       - name: Phan
         run: phan -d extensions/${{ env.EXTNAME }} --minimum-target-php-version=7.3 -k ${{ env.MW_INSTALL_PATH }}/vendor/mediawiki/mediawiki-phan-config/src/config.php --long-progress-bar
+
+  cleanup:
+    name: Cleanup
+    if: always()
+    needs: [ style, security ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute Webhook
+        env:
+          WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_TOKEN }}
+        run: |
+          echo "::add-mask::$WEBHOOK_TOKEN"
+          curl -fsV -X POST "https://api.github.com/repos/$GITHUB_REPOSITORY/dispatches" --header "Authorization: token $WEBHOOK_TOKEN" --header 'Content-Type: application/json' --header 'Accept: application/vnd.github.everest-preview+json' --data-raw "{ \"event_type\": \"delete_all_artifacts\", \"client_payload\": {\"parent_runid\": \"$GITHUB_RUN_ID\", \"parent_repo\": \"$GITHUB_REPOSITORY\"} }"
