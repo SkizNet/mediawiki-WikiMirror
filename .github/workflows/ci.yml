@@ -13,10 +13,11 @@ env:
   MW_INSTALL_PATH: ${{ github.workspace }}
 
 jobs:
-  build:
-    name: Main Test Build
+  style:
+    name: Code Style
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
         php: [ '7.4' ]
@@ -28,6 +29,7 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mbstring, intl
           coverage: none
+          tools: composer, phpcs, phplint
       - name: Setup MediaWiki
         uses: actions/checkout@v2
         with:
@@ -49,43 +51,6 @@ jobs:
           echo '{"extra":{"merge-plugin":{"include":["extensions/*/composer.json","skins/*/composer.json"]}}}' > composer.local.json
           composer update
           composer update
-      - name: Install MediaWiki
-        run: |
-          php maintenance/install.php --dbtype sqlite --dbuser root --dbname mw --with-extensions --pass AdminPassword WikiName AdminUser
-          echo 'require_once "$IP/includes/DevelopmentSettings.php";' >> LocalSettings.php
-      - name: Create Artifact
-        run: tar -cvf ${{ runner.temp }}/wiki.tar .
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.EXTNAME }}-${{ matrix.os }}-${{ matrix.php }}-${{ matrix.mediawiki }}-${{ github.sha }}
-          path: ${{ runner.temp }}/wiki.tar
-          retention-days: 1
-
-  style:
-    name: Code Style
-    needs: build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-latest ]
-        php: [ '7.4' ]
-        mediawiki: [ REL1_35, master ]
-    steps:
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          extensions: mbstring, intl
-          coverage: none
-          tools: composer, phpcs, phplint
-      - name: Download Artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: ${{ env.EXTNAME }}-${{ matrix.os }}-${{ matrix.php }}-${{ matrix.mediawiki }}-${{ github.sha }}
-      - name: Extract Artifact
-        run: tar -xvf wiki.tar
       - name: Lint
         run: phplint -w extensions/${{ env.EXTNAME }}
       - name: PHP Code Sniffer
@@ -96,6 +61,7 @@ jobs:
     needs: build
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
         php: [ '7.4' ]
@@ -109,24 +75,26 @@ jobs:
           ini-values: auto_prepend_file=${{ env.MW_INSTALL_PATH }}/vendor/autoload.php
           coverage: none
           tools: composer, phan
-      - name: Download Artifact
-        uses: actions/download-artifact@v2
+      - name: Setup MediaWiki
+        uses: actions/checkout@v2
         with:
-          name: ${{ env.EXTNAME }}-${{ matrix.os }}-${{ matrix.php }}-${{ matrix.mediawiki }}-${{ github.sha }}
-      - name: Extract Artifact
-        run: tar -xvf wiki.tar
+          repository: wikimedia/mediawiki
+          ref: ${{ matrix.mediawiki }}
+      - name: Setup VisualEditor
+        uses: actions/checkout@v2
+        with:
+          repository: wikimedia/mediawiki-extensions-VisualEditor
+          ref: ${{ matrix.mediawiki }}
+          path: extensions/VisualEditor
+          submodules: true
+      - name: Setup Extension
+        uses: actions/checkout@v2
+        with:
+          path: extensions/${{ env.EXTNAME }}
+      - name: Setup Composer
+        run: |
+          echo '{"extra":{"merge-plugin":{"include":["extensions/*/composer.json","skins/*/composer.json"]}}}' > composer.local.json
+          composer update
+          composer update
       - name: Phan
         run: phan -d extensions/${{ env.EXTNAME }} --minimum-target-php-version=7.3 --long-progress-bar
-
-  cleanup:
-    name: Cleanup
-    if: always()
-    needs: [ style, security ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Execute Webhook
-        env:
-          WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_TOKEN }}
-        run: |
-          echo "::add-mask::$WEBHOOK_TOKEN"
-          curl -fSv -X POST "https://api.github.com/repos/$GITHUB_REPOSITORY/dispatches" --header "Authorization: token $WEBHOOK_TOKEN" --header 'Content-Type: application/json' --header 'Accept: application/vnd.github.everest-preview+json' --data-raw "{ \"event_type\": \"delete_all_artifacts\", \"client_payload\": {\"parent_runid\": \"$GITHUB_RUN_ID\", \"parent_repo\": \"$GITHUB_REPOSITORY\"} }"
