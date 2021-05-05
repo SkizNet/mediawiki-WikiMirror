@@ -71,9 +71,8 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: mbstring, intl, ast
-          ini-values: auto_prepend_file=${{ env.MW_INSTALL_PATH }}/vendor/autoload.php
           coverage: none
-          tools: composer, phan
+          tools: composer
       - name: Setup MediaWiki
         uses: actions/checkout@v2
         with:
@@ -96,4 +95,4 @@ jobs:
           composer update
           composer update
       - name: Phan
-        run: phan -d extensions/${{ env.EXTNAME }} --minimum-target-php-version=7.3 --long-progress-bar
+        run: ./vendor/bin/phan -d extensions/${{ env.EXTNAME }} --minimum-target-php-version=7.3 --long-progress-bar
