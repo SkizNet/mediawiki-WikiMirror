@@ -6,7 +6,6 @@ use IDBAccessObject;
 use MediaWiki\Page\PageIdentity;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
-use MWException;
 use Title;
 use WikiMirror\Mirror\Mirror;
 use WikiMirror\Mirror\RemoteRevisionRecord;
@@ -84,15 +83,24 @@ class RevisionLookupManipulator implements RevisionLookup {
 
 	/**
 	 * @inheritDoc
-	 * @throws MWException
 	 */
 	public function getKnownCurrentRevision( $page, $revId = 0 ) {
-		if ( $page instanceof PageIdentity ) {
+		if ( $page instanceof Title ) {
+			$title = $page;
+		} elseif ( $page instanceof PageIdentity ) {
 			// 1.36+
+			// Despite PageIdentity not existing in 1.35,
+			// PHP seems to not error or even warn on this instanceof check
 			$title = Title::newFromDBkey( $page->getDBkey() );
 		} else {
-			// 1.35
-			$title = $page;
+			// should never happen
+			return false;
+		}
+
+		if ( $title === null ) {
+			// invalid title somehow, should never happen
+			// but check for it anyway to make phan happy
+			return false;
 		}
 
 		if ( !$revId && $this->mirror->canMirror( $title ) ) {

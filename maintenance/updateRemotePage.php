@@ -19,7 +19,7 @@ namespace WikiMirror\Maintenance {
 	use ReflectionClass;
 	use WikiMirror\Compat\CurlHandler;
 
-	// phpcs:disable MediaWiki.Files.ClassMatchesFilename.WrongCase
+	// phpcs:ignore MediaWiki.Files.ClassMatchesFilename.WrongCase
 	class UpdateRemotePage extends Maintenance {
 		/** @var array */
 		private $originalOptions;
@@ -102,8 +102,8 @@ namespace WikiMirror\Maintenance {
 					$this->fetchFromDump( $path, $skip, $count );
 				}
 			} finally {
-				// phpcs:disable Generic.PHP.NoSilencedErrors.Discouraged
 				if ( $haveTempFile ) {
+					// phpcs:ignore Generic.PHP.NoSilencedErrors.Discouraged
 					@unlink( $path );
 				}
 			}
@@ -165,7 +165,7 @@ namespace WikiMirror\Maintenance {
 
 				$this->outputChanneled( 'Download complete!' );
 			} catch ( Exception $e ) {
-				// phpcs:disable Generic.PHP.NoSilencedErrors.Discouraged
+				// phpcs:ignore Generic.PHP.NoSilencedErrors.Discouraged
 				@unlink( $tmpFile );
 				throw $e;
 			}
@@ -242,7 +242,6 @@ namespace WikiMirror\Maintenance {
 				// don't actually execute through Shell because we want to have stdout print immediately
 				// in the subprocesses, and we don't want to limit via cgroups, firejail, etc.
 				// passthru() does exactly what we want it to do, so use that directly
-				// phpcs:disable MediaWiki.Usage.ForbiddenFunctions.passthru
 				if ( method_exists( $command, 'getCommandString' ) ) {
 					// 1.36+
 					$commandString = $command->getCommandString();
@@ -251,6 +250,7 @@ namespace WikiMirror\Maintenance {
 					$commandString = substr( (string)$command, 10 );
 				}
 
+				// phpcs:ignore MediaWiki.Usage.ForbiddenFunctions.passthru
 				passthru( $commandString, $exitCode );
 				if ( $exitCode !== 0 ) {
 					// subcommand failed, abort
@@ -271,6 +271,7 @@ namespace WikiMirror\Maintenance {
 		 */
 		private function fetchFromDump( string $path, $skip, $count ) {
 			$now = wfTimestampNow();
+			$db = $this->getDB( DB_PRIMARY );
 
 			// check if we need to execute in batched mode
 			$batchSize = $this->getBatchSize();
@@ -282,8 +283,6 @@ namespace WikiMirror\Maintenance {
 			}
 
 			try {
-				$db = $this->getDB( DB_PRIMARY );
-
 				// write new data to db
 				$fh = gzopen( $path, 'rb' );
 				if ( $fh === false ) {
@@ -321,8 +320,9 @@ namespace WikiMirror\Maintenance {
 					}
 				}
 			} finally {
-				// phpcs:disable Generic.PHP.NoSilencedErrors.Discouraged
-				if ( $fh !== false ) {
+				// @phan-suppress-next-line PhanPossiblyUndeclaredVariable
+				if ( $fh !== false && $fh !== null ) {
+					// phpcs:ignore Generic.PHP.NoSilencedErrors.Discouraged
 					@gzclose( $fh );
 				}
 			}

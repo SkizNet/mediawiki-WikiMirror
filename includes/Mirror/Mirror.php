@@ -438,6 +438,10 @@ class Mirror {
 		}
 
 		$data = json_decode( $res, true );
+		if ( !is_array( $data ) || !array_key_exists( $action, $data ) ) {
+			wfWarn( "Unexpected response from remote mirror API action={$action}." );
+			return false;
+		}
 
 		return $data[$action];
 	}
