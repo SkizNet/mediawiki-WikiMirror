@@ -8,6 +8,7 @@ use MediaWiki\Interwiki\InterwikiLookup;
 use Status;
 use Title;
 use WANObjectCache;
+use Wikimedia\Rdbms\ILoadBalancer;
 use WikiMirror\API\PageInfoResponse;
 use WikiMirror\API\ParseResponse;
 use WikiMirror\API\SiteInfoResponse;
@@ -37,24 +38,30 @@ class Mirror {
 	/** @var WANObjectCache */
 	protected $cache;
 
+	/** @var ILoadBalancer */
+	protected $loadBalancer;
+
 	/**
 	 * Mirror constructor.
 	 *
 	 * @param InterwikiLookup $interwikiLookup
 	 * @param HttpRequestFactory $httpRequestFactory
 	 * @param WANObjectCache $wanObjectCache
+	 * @param ILoadBalancer $loadBalancer
 	 * @param ServiceOptions $options
 	 */
 	public function __construct(
 		InterwikiLookup $interwikiLookup,
 		HttpRequestFactory $httpRequestFactory,
 		WANObjectCache $wanObjectCache,
+		ILoadBalancer $loadBalancer,
 		ServiceOptions $options
 	) {
 		$options->assertRequiredOptions( self::CONSTRUCTOR_OPTIONS );
 		$this->interwikiLookup = $interwikiLookup;
 		$this->httpRequestFactory = $httpRequestFactory;
 		$this->cache = $wanObjectCache;
+		$this->loadBalancer = $loadBalancer;
 		$this->options = $options;
 	}
 
@@ -365,7 +372,28 @@ class Mirror {
 	 * @return bool True if the title can be mirrored, false if not.
 	 */
 	public function canMirror( Title $title ) {
-		return ( !$title->exists() || !$title->getLatestRevID() ) && $this->getCachedPage( $title )->isOK();
+		if ( $title->exists() && $title->getLatestRevID() ) {
+			// page exists locally
+			return false;
+		}
+
+		$dbr = $this->loadBalancer->getConnection( DB_REPLICA );
+		$result = $dbr->selectField( 'forked_titles', 'COUNT(1)', [
+			'ft_namespace' => $title->getNamespace(),
+			'ft_title' => $title->getDBkey()
+		], __METHOD__ );
+
+		if ( $result > 0 ) {
+			// title has been forked locally despite the page not existing
+			return false;
+		}
+
+		if ( !$this->getCachedPage( $title )->isOK() ) {
+			// not able to successfully fetch the mirrored page
+			return false;
+		}
+
+		return true;
 	}
 
 	/**

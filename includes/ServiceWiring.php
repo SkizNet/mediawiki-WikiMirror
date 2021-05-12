@@ -10,6 +10,7 @@ return [
 			$services->getInterwikiLookup(),
 			$services->getHttpRequestFactory(),
 			$services->getMainWANObjectCache(),
+			$services->getDBLoadBalancer(),
 			new ServiceOptions(
 				Mirror::CONSTRUCTOR_OPTIONS,
 				$services->getMainConfig()

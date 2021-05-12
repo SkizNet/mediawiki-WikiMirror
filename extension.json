@@ -21,6 +21,7 @@
 	"Hooks": {
 		"ApiMain::moduleManager": "api",
 		"getUserPermissionsErrors": "mirror",
+		"ImportHandlePageXMLTag": "fork",
 		"LoadExtensionSchemaUpdates": "database",
 		"MediaWikiServices": "service",
 		"SkinTemplateNavigation::Universal": "mirror",
@@ -33,6 +34,13 @@
 		},
 		"database": {
 			"class": "WikiMirror\\Database\\Hooks"
+		},
+		"fork": {
+			"class": "WikiMirror\\Fork\\Hooks",
+			"services": [
+				"DBLoadBalancer",
+				"ContentLanguage"
+			]
 		},
 		"mirror": {
 			"class": "WikiMirror\\Mirror\\Hooks",
