@@ -3,7 +3,6 @@
 namespace WikiMirror\Service;
 
 use IDBAccessObject;
-use MediaWiki\Page\PageIdentity;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
 use Title;
@@ -92,10 +91,10 @@ class RevisionLookupManipulator implements RevisionLookup {
 			$title = $page;
 		} elseif (
 			interface_exists( '\MediaWiki\Page\PageIdentity' )
-			&& $page instanceof PageIdentity // @phan-suppress-current-line PhanUndeclaredClassInstanceOf 1.35 FP
+			&& is_a( $page, '\MediaWiki\Page\PageIdentity' )
 		) {
-			// 1.36+
-			// @phan-suppress-next-line PhanUndeclaredClassMethodCall 1.35 FP
+			// 1.36+; below suppression is for 1.35 compat
+			// @phan-suppress-next-line PhanUndeclaredClassMethod
 			$title = Title::newFromDBkey( $page->getDBkey() );
 		} else {
 			// should never happen
