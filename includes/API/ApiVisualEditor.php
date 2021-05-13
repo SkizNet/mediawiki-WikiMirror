@@ -17,6 +17,9 @@ class ApiVisualEditor extends \ApiVisualEditor {
 	 */
 	public function __construct( ApiMain $main, $name, UserNameUtils $userNameUtils, Mirror $mirror ) {
 		$this->mirror = $mirror;
+		// In 1.35, ApiVisualEditor constructor takes 2 args, however it's safe in PHP to pass
+		// too many arguments to a thing, so suppress phan for 1.35 instead of doing a version_compare
+		// @phan-suppress-next-line PhanParamTooMany
 		parent::__construct( $main, $name, $userNameUtils );
 	}
 

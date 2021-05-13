@@ -31,8 +31,11 @@ class RevisionLookupManipulator implements RevisionLookup {
 	/**
 	 * @inheritDoc
 	 */
-	public function getRevisionById( $id, $flags = 0 ) {
-		return $this->revisionLookup->getRevisionById( $id, $flags );
+	public function getRevisionById( $id, $flags = 0, $page = null ) {
+		// In 1.35, getRevisionById only takes 2 args, however it's safe in PHP to pass
+		// too many arguments to a thing, so suppress phan for 1.35 instead of doing a version_compare
+		// @phan-suppress-next-line PhanParamTooMany
+		return $this->revisionLookup->getRevisionById( $id, $flags, $page );
 	}
 
 	/**
@@ -87,10 +90,8 @@ class RevisionLookupManipulator implements RevisionLookup {
 	public function getKnownCurrentRevision( $page, $revId = 0 ) {
 		if ( $page instanceof Title ) {
 			$title = $page;
-		} elseif ( $page instanceof PageIdentity ) {
+		} elseif ( interface_exists( '\MediaWiki\Page\PageIdentity' ) && $page instanceof PageIdentity ) {
 			// 1.36+
-			// Despite PageIdentity not existing in 1.35,
-			// PHP seems to not error or even warn on this instanceof check
 			$title = Title::newFromDBkey( $page->getDBkey() );
 		} else {
 			// should never happen
