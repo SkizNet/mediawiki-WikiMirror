@@ -244,6 +244,7 @@ namespace WikiMirror\Maintenance {
 				// passthru() does exactly what we want it to do, so use that directly
 				if ( method_exists( $command, 'getCommandString' ) ) {
 					// 1.36+
+					// @phan-suppress-next-line PhanUndeclaredMethod
 					$commandString = $command->getCommandString();
 				} else {
 					// 1.35
