@@ -86,13 +86,16 @@ class RevisionLookupManipulator implements RevisionLookup {
 
 	/**
 	 * @inheritDoc
-	 * @suppress PhanUndeclaredClassInstanceOf, PhanUndeclaredClassMethodCall
 	 */
 	public function getKnownCurrentRevision( $page, $revId = 0 ) {
 		if ( $page instanceof Title ) {
 			$title = $page;
-		} elseif ( interface_exists( '\MediaWiki\Page\PageIdentity' ) && $page instanceof PageIdentity ) {
-			// 1.36+, remove phan suppressions from doc comment above when we drop 1.35 support
+		} elseif (
+			interface_exists( '\MediaWiki\Page\PageIdentity' )
+			&& $page instanceof PageIdentity // @phan-suppress-current-line PhanUndeclaredClassInstanceOf 1.35 FP
+		) {
+			// 1.36+
+			// @phan-suppress-next-line PhanUndeclaredClassMethodCall 1.35 FP
 			$title = Title::newFromDBkey( $page->getDBkey() );
 		} else {
 			// should never happen
