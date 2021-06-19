@@ -4,15 +4,20 @@
 			"Ryan Schmidt"
 		]
 	},
+	"fork": "Fork page",
 	"right-fork": "Create local copies of mirrored pages",
 	"wikimirror-action-fork": "Fork",
 	"wikimirror-api-error": "An unrecoverable error has occurred with the remote wiki's API.",
 	"wikimirror-config-remote": "Interwiki prefix of the remote wiki",
 	"wikimirror-desc": "Mirror and fork remote wiki articles",
 	"wikimirror-extensionname": "WikiMirror",
+	"wikimirror-fork-text": "Forking this page will stop mirroring it from the remote wiki, allowing you to edit it locally. All revisions of the page will be imported from the remote wiki, the current revision will be imported immediately and the remainder will slowly be imported over time.\n\nTemplates and images used on the page will '''not''' be imported. If the template or image already exists locally, those local versions will be used by the forked page. Otherwise, it will continue to use versions of those templates and images from the remote wiki.",
+	"wikimirror-fork-title": "Fork $1",
 	"wikimirror-mirror-history": "This page is being mirrored from another wiki. [$1 Click here to view the page history on the remote wiki.]",
 	"wikimirror-mirrored": "This page is being mirrored from another wiki. Click here to view the remote page.",
 	"wikimirror-no-action": "You may not perform this action on a mirrored page.",
 	"wikimirror-no-edit": "You may not edit a mirrored page; it must be forked first.",
-	"wikimirror-no-mirror": "Unable to mirror $1. It may not exist on the remote wiki or may be a sensitive page."
+	"wikimirror-no-mirror": "Unable to mirror $1. It may not exist on the remote wiki or may be a sensitive page.",
+	"wikimirror-nofork-text": "The specified page cannot be forked. It may already exist locally or it may not exist remotely.",
+	"wikimirror-nofork-title": "Cannot fork"
 }

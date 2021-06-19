@@ -19,7 +19,6 @@ class Hooks implements LoadExtensionSchemaUpdatesHook {
 	 * @param DatabaseUpdater $updater DatabaseUpdater subclass
 	 */
 	public function onLoadExtensionSchemaUpdates( $updater ) {
-		$updater->addExtensionTable( 'forked_page', __DIR__ . '/../../sql/add-forked_page.sql' );
 		$updater->addExtensionTable( 'forked_titles', __DIR__ . '/../../sql/add-forked_titles.sql' );
 		$updater->addExtensionTable( 'remote_page', __DIR__ . '/../../sql/add-remote_page.sql' );
 	}

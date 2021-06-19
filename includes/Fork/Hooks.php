@@ -8,6 +8,10 @@ namespace WikiMirror\Fork;
 use ImportTitleFactory;
 use Language;
 use MediaWiki\Hook\ImportHandlePageXMLTagHook;
+use MediaWiki\Hook\PageMoveCompletingHook;
+use MediaWiki\Linker\LinkTarget;
+use MediaWiki\Revision\RevisionRecord;
+use MediaWiki\User\UserIdentity;
 use MWException;
 use NaiveForeignTitleFactory;
 use NamespaceAwareForeignTitleFactory;
@@ -15,7 +19,10 @@ use WikiImporter;
 use Wikimedia\Rdbms\ILoadBalancer;
 use WikiMirror\Compat\ReflectionHelper;
 
-class Hooks implements ImportHandlePageXMLTagHook {
+class Hooks implements
+	ImportHandlePageXMLTagHook,
+	PageMoveCompletingHook
+{
 	/** @var ILoadBalancer */
 	private $loadBalancer;
 
@@ -101,5 +108,29 @@ class Hooks implements ImportHandlePageXMLTagHook {
 			'ft_forked' => wfTimestampNow(),
 			'ft_imported' => 1
 		], __METHOD__, [ 'IGNORE' ] );
+	}
+
+	/**
+	 * Update forked_titles if a page is renamed.
+	 *
+	 * @param LinkTarget $old Old title
+	 * @param LinkTarget $new New title
+	 * @param UserIdentity $user User who did the move
+	 * @param int $pageid Database ID of the page that's been moved
+	 * @param int $redirid Database ID of the created redirect
+	 * @param string $reason Reason for the move
+	 * @param RevisionRecord $revision Revision created by the move
+	 * @return void To allow other hooks to run
+	 *
+	 */
+	public function onPageMoveCompleting( $old, $new, $user, $pageid, $redirid, $reason, $revision ) {
+		$dbw = $this->loadBalancer->getConnection( DB_PRIMARY );
+		$dbw->update( 'forked_titles', [
+			'ft_namespace' => $new->getNamespace(),
+			'ft_title' => $new->getDBkey()
+		], [
+			'ft_namespace' => $old->getNamespace(),
+			'ft_title' => $old->getDBkey()
+		], __METHOD__ );
 	}
 }

@@ -5,8 +5,8 @@
 	"author": [
 		"Ryan Schmidt"
 	],
-	"url": "",
-	"license-name": "",
+	"url": "https://mwusers.org",
+	"license-name": "GPL-3.0-or-later",
 	"descriptionmsg": "wikimirror-desc",
 	"type": "other",
 	"config": {
@@ -20,9 +20,11 @@
 	},
 	"Hooks": {
 		"ApiMain::moduleManager": "api",
+		"APIQueryAfterExecute": "api",
 		"getUserPermissionsErrors": "mirror",
 		"ImportHandlePageXMLTag": "fork",
 		"LoadExtensionSchemaUpdates": "database",
+		"PageMoveCompleting": "fork",
 		"MediaWikiServices": "service",
 		"SkinTemplateNavigation::Universal": "mirror",
 		"TitleIsAlwaysKnown": "mirror",
@@ -30,7 +32,10 @@
 	},
 	"HookHandlers": {
 		"api": {
-			"class": "WikiMirror\\API\\Hooks"
+			"class": "WikiMirror\\API\\Hooks",
+			"services": [
+				"Mirror"
+			]
 		},
 		"database": {
 			"class": "WikiMirror\\Database\\Hooks"
@@ -69,7 +74,12 @@
 		"fork"
 	],
 	"SpecialPages": {
-		"Fork": "WikiMirror\\Fork\\SpecialFork"
+		"Fork": {
+			"class": "WikiMirror\\Fork\\SpecialFork",
+			"services": [
+				"Mirror"
+			]
+		}
 	},
 	"ContentHandlers": {
 		"mirror": "WikiMirror\\Mirror\\MirrorContentHandler"

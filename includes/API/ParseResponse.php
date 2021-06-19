@@ -33,8 +33,6 @@ class ParseResponse {
 	public $properties;
 	/** @var PageInfoResponse */
 	private $pageInfo;
-	/** @var SiteInfoResponse */
-	private $siteInfo;
 	/** @var Mirror */
 	private $mirror;
 
