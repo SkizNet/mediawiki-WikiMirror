@@ -26,6 +26,9 @@ class Mirror {
 	/** @var string Group for process cache (1000 entries stored) */
 	public const PC_GROUP = 'mirror:1000';
 
+	/** @var int Version of data stored in process cache (increment to invalidate all existing cache entries) */
+	public const PC_VERSION = 2;
+
 	/** @var ServiceOptions */
 	protected $options;
 
@@ -95,7 +98,7 @@ class Mirror {
 		$pageName = $title->getPrefixedText();
 		wfDebugLog( 'WikiMirror', "Retrieving cached info for {$pageName}." );
 		$value = $this->cache->getWithSetCallback(
-			$this->cache->makeKey( 'mirror', 'remote-info', $id ),
+			$this->cache->makeKey( 'mirror', 'remote-info', self::PC_VERSION, $id ),
 			$this->options->get( 'TranscludeCacheExpiry' ),
 			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $title, $pageName ) {
 				wfDebugLog( 'WikiMirror', "{$pageName}: Info not found in cache." );
@@ -128,7 +131,7 @@ class Mirror {
 		$pageName = $title->getPrefixedText();
 		wfDebugLog( 'WikiMirror', "Retrieving cached text for {$pageName}." );
 		$value = $this->cache->getWithSetCallback(
-			$this->cache->makeKey( 'mirror', 'remote-text', $id ),
+			$this->cache->makeKey( 'mirror', 'remote-text', self::PC_VERSION, $id ),
 			$this->options->get( 'TranscludeCacheExpiry' ),
 			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $title, $pageName ) {
 				wfDebugLog( 'WikiMirror', "{$pageName}: Text not found in cache." );
@@ -288,14 +291,13 @@ class Mirror {
 			'format' => 'json',
 			'formatversion' => 2,
 			'action' => 'query',
-			'prop' => 'info|revisions|links',
+			'prop' => 'info|revisions',
 			'indexpageids' => 1,
 			'inprop' => 'displaytitle',
 			'rvdir' => 'older',
 			'rvlimit' => 1,
 			'rvprop' => 'ids|timestamp|user|userid|size|slotsize|sha1|slotsha1|contentmodel|comment',
 			'rvslots' => '*',
-			'pllimit' => 1,
 			'titles' => $title->getPrefixedText()
 		];
 
@@ -317,7 +319,24 @@ class Mirror {
 
 		// have an actual page id, which means the title exists on the remote
 		// cache the API response so we have the data available for future calls on the same title
-		return $data['pages'][0];
+		$pageInfo = $data['pages'][0];
+
+		// check if this is a redirect, and if so fetch information about the redirect
+		if ( array_key_exists( 'redirect', $pageInfo ) && $pageInfo['redirect'] ) {
+			$params = [
+				'format' => 'json',
+				'formatversion' => 2,
+				'action' => 'query',
+				'prop' => 'info',
+				'titles' => $title->getPrefixedText(),
+				'redirects' => true
+			];
+
+			$data = $this->getRemoteApiResponse( $params, __METHOD__ );
+			$pageInfo['redirect'] = $data['pages'][0];
+		}
+
+		return $pageInfo;
 	}
 
 	/**
