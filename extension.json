@@ -1,7 +1,7 @@
 {
 	"name": "WikiMirror",
 	"namemsg": "wikimirror-extensionname",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"author": [
 		"Ryan Schmidt"
 	],
@@ -10,6 +10,13 @@
 	"descriptionmsg": "wikimirror-desc",
 	"type": "other",
 	"config": {
+		"WikiMirrorAssignKnownUsers": {
+			"value": false,
+			"path": false,
+			"description": "When forking pages, whether or not imported revisions will be assigned to local users should their username match",
+			"descriptionmsg": "wikimirror-config-assignknownusers",
+			"public": true
+		},
 		"WikiMirrorRemote": {
 			"value": null,
 			"path": false,
@@ -77,6 +84,7 @@
 		"Fork": {
 			"class": "WikiMirror\\Fork\\SpecialFork",
 			"services": [
+				"DBLoadBalancer",
 				"Mirror"
 			]
 		}

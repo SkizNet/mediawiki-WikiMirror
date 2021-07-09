@@ -2,11 +2,13 @@
 
 namespace WikiMirror\Fork;
 
-use CommentStoreComment;
 use ContentHandler;
 use ErrorPageError;
+use ExternalUserNames;
+use HashConfig;
 use Html;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Revision\SlotRecord;
 use MWException;
 use OOUI;
 use ReadOnlyError;
@@ -16,7 +18,7 @@ use Wikimedia\Rdbms\ILoadBalancer;
 use WikiMirror\API\PageInfoResponse;
 use WikiMirror\API\ParseResponse;
 use WikiMirror\Mirror\Mirror;
-use WikiPage;
+use WikiRevision;
 
 class SpecialFork extends UnlistedSpecialPage {
 	/** @var Title */
@@ -46,6 +48,7 @@ class SpecialFork extends UnlistedSpecialPage {
 	 * @param string|null $subPage Title being forked
 	 * @throws ReadOnlyError If wiki is read only
 	 * @throws ErrorPageError If given title cannot be forked for any reason
+	 * @throws MWException On internal error
 	 */
 	public function execute( $subPage ) {
 		$this->useTransactionalTimeLimit();
@@ -94,7 +97,7 @@ class SpecialFork extends UnlistedSpecialPage {
 	 * Templates are not forked and will continue to use the mirrored version.
 	 *
 	 * @throws ErrorPageError On fork error
-	 * @throws MWException On internal errors
+	 * @throws MWException On internal error
 	 */
 	protected function doFork() {
 		$dbw = $this->loadBalancer->getConnection( DB_PRIMARY );
@@ -107,9 +110,15 @@ class SpecialFork extends UnlistedSpecialPage {
 
 		/** @var PageInfoResponse $pageInfo */
 		$pageInfo = $pageStatus->getValue();
+		$revInfo = $pageInfo->lastRevision;
 
-		/** @var ParseResponse $parseInfo */
-		$parseInfo = $textStatus->getValue();
+		/** @var ParseResponse $textInfo */
+		$textInfo = $textStatus->getValue();
+
+		// we only support importing the main slot at the moment; throw if the remote page has multiple slots
+		if ( count( $revInfo->slots ) != 1 || $revInfo->slots[0] !== SlotRecord::MAIN ) {
+			throw new ErrorPageError( 'wikimirror-nofork-title', 'wikimirror-nofork-text' );
+		}
 
 		// mark page as forked
 		$dbw->startAtomic( __METHOD__, $dbw::ATOMIC_CANCELABLE );
@@ -121,40 +130,45 @@ class SpecialFork extends UnlistedSpecialPage {
 			'ft_forked' => wfTimestampNow()
 		], __METHOD__ );
 
-		// actually create the page
-		if ( class_exists( '\MediaWiki\Page\WikiPageFactory' ) ) {
-			// 1.36+
-			// When we drop 1.35, inject WikiPageFactory rather than fetching from MediaWikiServices
-			$wikiPage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $this->title );
+		// FIXME: if we're forking the page as "deleted" then we're done
+
+		// actually create the page, re-using the import machinery to avoid code duplication
+		$content = ContentHandler::makeContent( $textInfo->wikitext, $this->title, $revInfo->mainContentModel );
+		$config = $this->getConfig();
+		$externalUserNames = new ExternalUserNames(
+			$config->get( 'WikiMirrorRemote' ),
+			$config->get( 'WikiMirrorAssignKnownUsers' )
+		);
+
+		$revision = new WikiRevision( new HashConfig() );
+		$revision->setTitle( $this->title );
+		$revision->setContent( SlotRecord::MAIN, $content );
+		$revision->setTimestamp( $revInfo->timestamp );
+		$revision->setComment( $revInfo->comment );
+		if ( $revInfo->remoteUserId === 0 ) {
+			$revision->setUserIP( $revInfo->user );
 		} else {
-			// 1.35
-			$wikiPage = WikiPage::factory( $this->title );
+			$revision->setUsername( $externalUserNames->applyPrefix( $revInfo->user ) );
 		}
 
-		if ( $wikiPage === null ) {
-			$dbw->cancelAtomic( __METHOD__ );
-			throw new ErrorPageError( 'wikimirror-nofork-title', 'wikimirror-nofork-text' );
-		}
+		$oldRevisionImporter = MediaWikiServices::getInstance()->getWikiRevisionOldRevisionImporter();
+		$oldRevisionImporter->import( $revision );
 
-		$content = ContentHandler::makeContent( $parseInfo->wikitext, $this->title, $pageInfo->contentModel );
-		$summary = CommentStoreComment::newUnsavedComment();
-
-		// FIXME: need to inherit the user that edited the remote page, and also maintain the edit summary
-		// and also make an import log entry, and register our "fork" tag somewhere
-		$updater = $wikiPage->newPageUpdater( $this->getUser() );
-		$updater->addTag( 'fork' );
-		$updater->setContent( 'main', $content );
-		$updater->saveRevision( $summary, EDIT_NEW | EDIT_INTERNAL );
+		// FIXME: check if we should add this page to the user's watchlist
 	}
 
 	/**
 	 * Display the form describing how forking works plus a button to let the user
 	 * confirm the fork action.
+	 *
+	 * @throws OOUI\Exception
 	 */
 	protected function showForm() {
 		$out = $this->getOutput();
 		$out->addWikiMsg( 'wikimirror-fork-text' );
 		$out->enableOOUI();
+
+		// FIXME: add checkboxes to delete the page and watch the page, and wrap them all into a frameset
 
 		$button = new OOUI\ButtonInputWidget( [
 			'name' => 'wpFork',
