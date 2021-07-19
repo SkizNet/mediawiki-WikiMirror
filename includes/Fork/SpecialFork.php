@@ -95,7 +95,8 @@ class SpecialFork extends UnlistedSpecialPage {
 			throw new ErrorPageError( 'badtitle', 'badtitletext' );
 		}
 
-		$this->getOutput()->addBacklinkSubtitle( $this->title );
+		$out = $this->getOutput();
+		$out->addBacklinkSubtitle( $this->title );
 
 		// check if this title is currently being mirrored;
 		// if not we can't fork it
@@ -104,18 +105,21 @@ class SpecialFork extends UnlistedSpecialPage {
 		}
 
 		$this->getSkin()->setRelevantTitle( $this->title );
-		$out = $this->getOutput();
+		$out->setRobotPolicy( 'noindex,nofollow' );
 		$out->setPageTitle( $this->msg( 'wikimirror-fork-title', $this->title->getPrefixedText() ) );
-		$out->addModuleStyles( 'mediawiki.special' );
+		$out->addModuleStyles( [ 'mediawiki.special', 'ext.WikiMirror' ] );
 		$out->addModules( 'mediawiki.misc-authed-ooui' );
 
 		$request = $this->getRequest();
+		$user = $this->getUser();
 
-		// use getBool() instead of getCheck() so we can set default values
-		// and so that it can be overridden via query string in the initial GET request
+		// Use getBool() instead of getCheck() so we can set default values
+		// and so that it can be overridden via query string in the initial GET request.
+		// If we were POSTed, do not default anything to true so that we can properly detect when the
+		// user deselected the checkbox.
 		$this->watch = $request->getBool( 'wpWatch',
-			$this->lookup->getBoolOption( $this->getUser(), 'watchcreations' ) );
-		$this->import = $request->getBool( 'wpImport', true );
+			!$request->wasPosted() && $this->lookup->getBoolOption( $user, 'watchcreations' ) );
+		$this->import = $request->getBool( 'wpImport', !$request->wasPosted() );
 		$this->comment = $request->getText( 'wpComment' );
 
 		if ( is_callable( [ $this->getContext(), 'getCsrfTokenSet' ] ) ) {
@@ -124,14 +128,20 @@ class SpecialFork extends UnlistedSpecialPage {
 			$editTokenValid = $this->getContext()->getCsrfTokenSet()->matchTokenField();
 		} else {
 			// 1.35-1.36
-			$editTokenValid = $this->getUser()->matchEditToken( $request->getVal( 'wpEditToken' ) );
+			$editTokenValid = $user->matchEditToken( $request->getVal( 'wpEditToken' ) );
 		}
 
-		if ( $request->wasPosted()
-			&& $request->getVal( 'action' ) === 'submit'
-			&& $editTokenValid
-		) {
+		if ( $request->wasPosted() && $request->getVal( 'action' ) === 'submit' && $editTokenValid ) {
 			$this->doFork();
+			$messageArgs = [ wfEscapeWikiText( $this->title->getPrefixedText() ) ];
+			if ( $this->import ) {
+				$message = 'wikimirror-import-success';
+			} else {
+				$message = 'wikimirror-delete-success';
+				$messageArgs[] = '[[Special:Log/delete|' . $this->msg( 'deletionlog' )->text() . ']]';
+			}
+
+			$out->addWikiMsgArray( $message, $messageArgs );
 		} else {
 			$this->showForm();
 		}
@@ -167,6 +177,9 @@ class SpecialFork extends UnlistedSpecialPage {
 			throw new ErrorPageError( 'wikimirror-nofork-title', 'wikimirror-nofork-text' );
 		}
 
+		$config = $this->getConfig();
+		$user = $this->getUser();
+
 		// mark page as forked
 		$dbw->startAtomic( __METHOD__ );
 		$dbw->insert( 'forked_titles', [
@@ -182,15 +195,10 @@ class SpecialFork extends UnlistedSpecialPage {
 		if ( !$this->import ) {
 			// we are not importing, so marking the page as deleted is sufficient
 			// add an entry to the deletion log with the user's comment
-			$logEntry = new ManualLogEntry( 'delete', 'fork' );
-			$logEntry->setPerformer( $this->getUser() );
-			$logEntry->setTarget( $this->title );
-			$logEntry->setComment( $this->comment );
-			$logId = $logEntry->insert( $dbw );
+			$logType = 'delete';
 		} else {
 			// actually create the page, re-using the import machinery to avoid code duplication
 			$content = ContentHandler::makeContent( $textInfo->wikitext, $this->title, $revInfo->mainContentModel );
-			$config = $this->getConfig();
 			$externalUserNames = new ExternalUserNames(
 				$config->get( 'WikiMirrorRemote' ),
 				$config->get( 'WikiMirrorAssignKnownUsers' )
@@ -208,15 +216,19 @@ class SpecialFork extends UnlistedSpecialPage {
 			}
 
 			$this->importer->import( $revision );
-			$logEntry = new ManualLogEntry( 'import', 'fork' );
-			$logEntry->setPerformer( $this->getUser() );
-			$logEntry->setTarget( $this->title );
-			$logEntry->setComment( $this->comment );
-			$logEntry->setParameters( [
-				'4:title-link:interwiki' => $config->get( 'WikiMirrorRemote' ) . ':' . $this->title->getPrefixedText()
-			] );
-			$logId = $logEntry->insert( $dbw );
+			$logType = 'import';
 		}
+
+		// add the log entry
+		$logEntry = new ManualLogEntry( $logType, 'fork' );
+		$logEntry->setPerformer( $user );
+		$logEntry->setTarget( $this->title );
+		$logEntry->setComment( $this->comment );
+		$logEntry->setParameters( [
+			'4:title-link:interwiki' =>
+				$config->get( 'WikiMirrorRemote' ) . ':' . $this->title->getPrefixedText()
+		] );
+		$logId = $logEntry->insert( $dbw );
 
 		if ( $this->watch ) {
 			// add the title to the user's watchlist
@@ -236,10 +248,10 @@ class SpecialFork extends UnlistedSpecialPage {
 			if ( is_callable( [ $watchlistManager, 'addWatch' ] ) ) {
 				// 1.37+
 				// @phan-suppress-next-line PhanUndeclaredMethod
-				$watchlistManager->addWatch( $this->getUser(), $newTitle );
+				$watchlistManager->addWatch( $user, $newTitle );
 			} else {
 				// 1.35-1.36
-				$this->getUser()->addWatch( $newTitle );
+				$user->addWatch( $newTitle );
 			}
 		}
 
@@ -342,8 +354,6 @@ class SpecialFork extends UnlistedSpecialPage {
 			'framed' => true,
 			'content' => $form
 		] ) );
-
-		$out->addModuleStyles( 'ext.WikiMirror' );
 	}
 
 	/** @inheritDoc */

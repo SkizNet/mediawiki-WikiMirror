@@ -65,12 +65,21 @@ class Hooks implements
 			return;
 		}
 
-		// when forking support is added, this will need to be updated to check if we've forked
-		// and then deleted the page. This will likely require some new schema to accomplish.
-		$db = $this->loadBalancer->getConnection( DB_REPLICA );
+		$dbr = $this->loadBalancer->getConnection( DB_REPLICA );
+
+		// is the page forked? If so short-circuit our checks
+		$count = $dbr->selectField( 'forked_titles', 'COUNT(*)', [
+			'ft_namespace' => $title->getNamespace(),
+			'ft_title' => $title->getDBkey()
+		], __METHOD__ );
+
+		if ( $count > 0 ) {
+			$cache[$cacheKey] = null;
+			return;
+		}
 
 		// right now we assume that foreign namespace ids match local namespace ids
-		$count = $db->selectField( 'remote_page', 'COUNT(*)', [
+		$count = $dbr->selectField( 'remote_page', 'COUNT(*)', [
 			'rp_namespace' => $title->getNamespace(),
 			'rp_title' => $title->getDBkey()
 		], __METHOD__ );
