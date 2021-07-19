@@ -125,12 +125,13 @@ class Hooks implements
 	 */
 	public function onPageMoveCompleting( $old, $new, $user, $pageid, $redirid, $reason, $revision ) {
 		$dbw = $this->loadBalancer->getConnection( DB_PRIMARY );
-		$dbw->update( 'forked_titles', [
+
+		// When renaming a page, the old page remains as a redirect (or may be deleted).
+		// In either case, we maintain its forked status; it is not automatically re-mirrored.
+		// The new page may already exist as a forked page if we are moving over a deleted page.
+		$dbw->insert( 'forked_titles', [
 			'ft_namespace' => $new->getNamespace(),
 			'ft_title' => $new->getDBkey()
-		], [
-			'ft_namespace' => $old->getNamespace(),
-			'ft_title' => $old->getDBkey()
-		], __METHOD__ );
+		], __METHOD__, [ 'IGNORE' ] );
 	}
 }

@@ -1,7 +1,7 @@
 {
 	"name": "WikiMirror",
 	"namemsg": "wikimirror-extensionname",
-	"version": "0.4.1",
+	"version": "0.5.0",
 	"author": [
 		"Ryan Schmidt"
 	],
@@ -85,12 +85,27 @@
 			"class": "WikiMirror\\Fork\\SpecialFork",
 			"services": [
 				"DBLoadBalancer",
-				"Mirror"
+				"Mirror",
+				"OldRevisionImporter",
+				"UserOptionsLookup"
 			]
 		}
 	},
+	"LogActionsHandlers": {
+		"delete/fork": "LogFormatter",
+		"import/fork": "LogFormatter"
+	},
 	"ContentHandlers": {
 		"mirror": "WikiMirror\\Mirror\\MirrorContentHandler"
+	},
+	"ResourceModules": {
+		"ext.WikiMirror": {
+			"localBasePath": "resources/ext.WikiMirror",
+			"remoteExtPath": "WikiMirror/resources/ext.WikiMirror",
+			"styles": [
+				"fork.css"
+			]
+		}
 	},
 	"ServiceWiringFiles": [
 		"includes/ServiceWiring.php"

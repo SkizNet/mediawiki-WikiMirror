@@ -4,7 +4,9 @@
 			"Ryan Schmidt"
 		]
 	},
-	"fork": "Generic page title for Special:Fork, also used as button text on Special:Fork.",
+	"fork": "Form heading for Special:Fork, also used as button text on Special:Fork.",
+	"logentry-delete-fork": "Log entry used when forking a page without importing revisions; this effectively deletes the page locally.",
+	"logentry-import-fork": "Log entry used when forking a page and importing remote revisions.",
 	"right-fork": "{{doc-right|fork}}",
 	"wikimirror-action-fork": "Text displayed in the tab which allows users to make a local copy of a mirrored page for editing.",
 	"wikimirror-api-error": "{{optional}} Error message added to server logs when an error is encountered. This message is not exposed to users.",
@@ -12,6 +14,8 @@
 	"wikimirror-config-remote": "{{optional}} Description of the configuration variable $wgWikiMirrorRemote. This message is not exposed to users.",
 	"wikimirror-desc": "{{desc|name=WikiMirror|url=https://www.mediawiki.org/wiki/Extension:WikiMirror}}",
 	"wikimirror-extensionname": "{{name}}",
+	"wikimirror-fork-comment": "Comment:",
+	"wikimirror-fork-import": "Checkbox label on Special:Fork",
 	"wikimirror-fork-text": "Help text displayed on Special:Fork.",
 	"wikimirror-fork-title": "Header displayed on Special:Fork, $1 is the title of the page being forked.",
 	"wikimirror-mirror-history": "Message displayed when a user visits the history page of a mirrored page. $1 is the URL of the remote wiki's history page.",

@@ -2,14 +2,19 @@
 
 namespace WikiMirror\Fork;
 
+use CommentStore;
 use ContentHandler;
 use ErrorPageError;
+use Exception;
 use ExternalUserNames;
 use HashConfig;
 use Html;
+use ManualLogEntry;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\SlotRecord;
+use MediaWiki\User\UserOptionsLookup;
 use MWException;
+use OldRevisionImporter;
 use OOUI;
 use ReadOnlyError;
 use Title;
@@ -30,16 +35,40 @@ class SpecialFork extends UnlistedSpecialPage {
 	/** @var Mirror */
 	protected $mirror;
 
+	/** @var OldRevisionImporter */
+	protected $importer;
+
+	/** @var UserOptionsLookup */
+	protected $lookup;
+
+	/** @var bool */
+	private $watch;
+
+	/** @var bool */
+	private $import;
+
+	/** @var string */
+	private $comment;
+
 	/**
 	 * Special page to fork a mirrored page's content locally.
 	 *
 	 * @param ILoadBalancer $loadBalancer
 	 * @param Mirror $mirror
+	 * @param OldRevisionImporter $importer
+	 * @param UserOptionsLookup $lookup
 	 */
-	public function __construct( ILoadBalancer $loadBalancer, Mirror $mirror ) {
+	public function __construct(
+		ILoadBalancer $loadBalancer,
+		Mirror $mirror,
+		OldRevisionImporter $importer,
+		UserOptionsLookup $lookup
+	) {
 		parent::__construct( 'Fork', 'fork' );
 		$this->loadBalancer = $loadBalancer;
 		$this->mirror = $mirror;
+		$this->importer = $importer;
+		$this->lookup = $lookup;
 	}
 
 	/**
@@ -49,6 +78,7 @@ class SpecialFork extends UnlistedSpecialPage {
 	 * @throws ReadOnlyError If wiki is read only
 	 * @throws ErrorPageError If given title cannot be forked for any reason
 	 * @throws MWException On internal error
+	 * @throws OOUI\Exception If a programming error occurs
 	 */
 	public function execute( $subPage ) {
 		$this->useTransactionalTimeLimit();
@@ -81,9 +111,24 @@ class SpecialFork extends UnlistedSpecialPage {
 
 		$request = $this->getRequest();
 
+		// use getBool() instead of getCheck() so we can set default values
+		// and so that it can be overridden via query string in the initial GET request
+		$this->watch = $request->getBool( 'wpWatch',
+			$this->lookup->getBoolOption( $this->getUser(), 'watchcreations' ) );
+		$this->import = $request->getBool( 'wpImport', true );
+		$this->comment = $request->getText( 'wpComment' );
+
+		if ( is_callable( [ $this->getContext(), 'getCsrfTokenSet' ] ) ) {
+			// 1.37+
+			$editTokenValid = $this->getContext()->getCsrfTokenSet()->matchTokenField();
+		} else {
+			// 1.35-1.36
+			$editTokenValid = $this->getUser()->matchEditToken( $request->getVal( 'wpEditToken' ) );
+		}
+
 		if ( $request->wasPosted()
 			&& $request->getVal( 'action' ) === 'submit'
-			&& $this->getUser()->matchEditToken( $request->getVal( 'wpEditToken' ) )
+			&& $editTokenValid
 		) {
 			$this->doFork();
 		} else {
@@ -98,6 +143,7 @@ class SpecialFork extends UnlistedSpecialPage {
 	 *
 	 * @throws ErrorPageError On fork error
 	 * @throws MWException On internal error
+	 * @throws Exception When failing to publish log entries
 	 */
 	protected function doFork() {
 		$dbw = $this->loadBalancer->getConnection( DB_PRIMARY );
@@ -121,40 +167,83 @@ class SpecialFork extends UnlistedSpecialPage {
 		}
 
 		// mark page as forked
-		$dbw->startAtomic( __METHOD__, $dbw::ATOMIC_CANCELABLE );
+		$dbw->startAtomic( __METHOD__ );
 		$dbw->insert( 'forked_titles', [
 			'ft_namespace' => $this->title->getNamespace(),
 			'ft_title' => $this->title->getDBkey(),
 			'ft_remote_page' => $pageInfo->pageId,
 			'ft_remote_revision' => $pageInfo->lastRevisionId,
-			'ft_forked' => wfTimestampNow()
+			'ft_forked' => wfTimestampNow(),
+			// if not importing revisions, consider this page fully imported
+			'ft_imported' => !$this->import
 		], __METHOD__ );
 
-		// FIXME: if we're forking the page as "deleted" then we're done
-
-		// actually create the page, re-using the import machinery to avoid code duplication
-		$content = ContentHandler::makeContent( $textInfo->wikitext, $this->title, $revInfo->mainContentModel );
-		$config = $this->getConfig();
-		$externalUserNames = new ExternalUserNames(
-			$config->get( 'WikiMirrorRemote' ),
-			$config->get( 'WikiMirrorAssignKnownUsers' )
-		);
-
-		$revision = new WikiRevision( new HashConfig() );
-		$revision->setTitle( $this->title );
-		$revision->setContent( SlotRecord::MAIN, $content );
-		$revision->setTimestamp( $revInfo->timestamp );
-		$revision->setComment( $revInfo->comment );
-		if ( $revInfo->remoteUserId === 0 ) {
-			$revision->setUserIP( $revInfo->user );
+		if ( !$this->import ) {
+			// we are not importing, so marking the page as deleted is sufficient
+			// add an entry to the deletion log with the user's comment
+			$logEntry = new ManualLogEntry( 'delete', 'fork' );
+			$logEntry->setPerformer( $this->getUser() );
+			$logEntry->setTarget( $this->title );
+			$logEntry->setComment( $this->comment );
+			$logId = $logEntry->insert( $dbw );
 		} else {
-			$revision->setUsername( $externalUserNames->applyPrefix( $revInfo->user ) );
+			// actually create the page, re-using the import machinery to avoid code duplication
+			$content = ContentHandler::makeContent( $textInfo->wikitext, $this->title, $revInfo->mainContentModel );
+			$config = $this->getConfig();
+			$externalUserNames = new ExternalUserNames(
+				$config->get( 'WikiMirrorRemote' ),
+				$config->get( 'WikiMirrorAssignKnownUsers' )
+			);
+
+			$revision = new WikiRevision( new HashConfig() );
+			$revision->setTitle( $this->title );
+			$revision->setContent( SlotRecord::MAIN, $content );
+			$revision->setTimestamp( $revInfo->timestamp );
+			$revision->setComment( $revInfo->comment );
+			if ( $revInfo->remoteUserId === 0 ) {
+				$revision->setUserIP( $revInfo->user );
+			} else {
+				$revision->setUsername( $externalUserNames->applyPrefix( $revInfo->user ) );
+			}
+
+			$this->importer->import( $revision );
+			$logEntry = new ManualLogEntry( 'import', 'fork' );
+			$logEntry->setPerformer( $this->getUser() );
+			$logEntry->setTarget( $this->title );
+			$logEntry->setComment( $this->comment );
+			$logEntry->setParameters( [
+				'4:title-link:interwiki' => $config->get( 'WikiMirrorRemote' ) . ':' . $this->title->getPrefixedText()
+			] );
+			$logId = $logEntry->insert( $dbw );
 		}
 
-		$oldRevisionImporter = MediaWikiServices::getInstance()->getWikiRevisionOldRevisionImporter();
-		$oldRevisionImporter->import( $revision );
+		if ( $this->watch ) {
+			// add the title to the user's watchlist
+			// clear Title cache first since we now have a page id
+			Title::clearCaches();
+			$newTitle = Title::newFromDBkey( $this->title->getDBkey() );
 
-		// FIXME: check if we should add this page to the user's watchlist
+			if ( is_callable( [ MediaWikiServices::getInstance(), 'getWatchlistManager' ] ) ) {
+				// 1.36+
+				$watchlistManager = MediaWikiServices::getInstance()->getWatchlistManager();
+			} else {
+				// 1.35
+				$watchlistManager = MediaWikiServices::getInstance()->getWatchlistNotificationManager();
+			}
+
+			if ( is_callable( [ $watchlistManager, 'addWatch' ] ) ) {
+				// 1.37+
+				$watchlistManager->addWatch( $this->getUser(), $newTitle );
+			} else {
+				// 1.35-1.36
+				$this->getUser()->addWatch( $newTitle );
+			}
+		}
+
+		$dbw->endAtomic( __METHOD__ );
+
+		// send log entry to feeds now that we've committed the transaction
+		$logEntry->publish( $logId );
 	}
 
 	/**
@@ -168,31 +257,88 @@ class SpecialFork extends UnlistedSpecialPage {
 		$out->addWikiMsg( 'wikimirror-fork-text' );
 		$out->enableOOUI();
 
-		// FIXME: add checkboxes to delete the page and watch the page, and wrap them all into a frameset
+		$fields = [];
 
-		$button = new OOUI\ButtonInputWidget( [
+		$fields[] = new OOUI\FieldLayout( new OOUI\TextInputWidget( [
+			'name' => 'wpComment',
+			'id' => 'wpComment',
+			'maxLength' => CommentStore::COMMENT_CHARACTER_LIMIT,
+			'value' => $this->comment
+		] ), [
+			'label' => $this->msg( 'wikimirror-fork-comment' )->text(),
+			'align' => 'top'
+		] );
+
+		$fields[] = new OOUI\FieldLayout( new OOUI\CheckboxInputWidget( [
+			'name' => 'wpImport',
+			'id' => 'wpImport',
+			'value' => '1',
+			'selected' => $this->import
+		] ), [
+			'label' => $this->msg( 'wikimirror-fork-import' )->text(),
+			'align' => 'inline'
+		] );
+
+		$fields[] = new OOUI\FieldLayout( new OOUI\CheckboxInputWidget( [
+			'name' => 'wpWatch',
+			'id' => 'wpWatch',
+			'value' => '1',
+			'selected' => $this->watch
+		] ), [
+			'label' => $this->msg( 'watchthis' )->text(),
+			'align' => 'inline'
+		] );
+
+		$fields[] = new OOUI\FieldLayout( new OOUI\ButtonInputWidget( [
 			'name' => 'wpFork',
 			'value' => $this->msg( 'fork' )->text(),
 			'label' => $this->msg( 'fork' )->text(),
 			'flags' => [ 'primary', 'progressive' ],
 			'type' => 'submit',
+		] ), [
+			'align' => 'top'
+		] );
+
+		$fieldset = new OOUI\FieldsetLayout( [
+			'id' => 'mw-fork-table',
+			'label' => $this->msg( 'fork' )->text(),
+			'items' => $fields
 		] );
 
 		$subpage = $this->title->getPrefixedText();
+		if ( is_callable( [ $this->getContext(), 'getCsrfTokenSet' ] ) ) {
+			// 1.37+
+			// keep the fully qualified class name here since a use statement would break in 1.35-1.36
+			$editToken = $this->getContext()->getCsrfTokenSet()->getToken();
+			$editTokenFieldName = \MediaWiki\Session\CsrfTokenSet::DEFAULT_FIELD_NAME;
+		} else {
+			// 1.35-1.36
+			$editToken = $this->getUser()->getEditToken();
+			$editTokenFieldName = 'wpEditToken';
+		}
+
 		$form = new OOUI\FormLayout( [
 			'method' => 'post',
 			'action' => $this->getPageTitle( $subpage )->getLocalURL( 'action=submit' ),
-			'id' => 'forkpage',
+			'id' => 'forkpage'
 		] );
 
 		$form->appendContent(
-			$button,
+			$fieldset,
 			new OOUI\HtmlSnippet(
-				Html::hidden( 'wpEditToken', $this->getUser()->getEditToken() )
+				Html::hidden( $editTokenFieldName, $editToken )
 			)
 		);
 
-		$out->addHTML( $form );
+		$out->addHTML( new OOUI\PanelLayout( [
+			'classes' => [ 'fork-wrapper' ],
+			'expanded' => false,
+			'padded' => true,
+			'framed' => true,
+			'content' => $form
+		] ) );
+
+		$out->addModuleStyles( 'ext.WikiMirror' );
 	}
 
 	/** @inheritDoc */
