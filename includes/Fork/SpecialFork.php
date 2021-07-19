@@ -120,6 +120,7 @@ class SpecialFork extends UnlistedSpecialPage {
 
 		if ( is_callable( [ $this->getContext(), 'getCsrfTokenSet' ] ) ) {
 			// 1.37+
+			// @phan-suppress-next-line PhanUndeclaredMethod
 			$editTokenValid = $this->getContext()->getCsrfTokenSet()->matchTokenField();
 		} else {
 			// 1.35-1.36
@@ -225,6 +226,7 @@ class SpecialFork extends UnlistedSpecialPage {
 
 			if ( is_callable( [ MediaWikiServices::getInstance(), 'getWatchlistManager' ] ) ) {
 				// 1.36+
+				// @phan-suppress-next-line PhanUndeclaredMethod
 				$watchlistManager = MediaWikiServices::getInstance()->getWatchlistManager();
 			} else {
 				// 1.35
@@ -233,6 +235,7 @@ class SpecialFork extends UnlistedSpecialPage {
 
 			if ( is_callable( [ $watchlistManager, 'addWatch' ] ) ) {
 				// 1.37+
+				// @phan-suppress-next-line PhanUndeclaredMethod
 				$watchlistManager->addWatch( $this->getUser(), $newTitle );
 			} else {
 				// 1.35-1.36
@@ -309,7 +312,9 @@ class SpecialFork extends UnlistedSpecialPage {
 		if ( is_callable( [ $this->getContext(), 'getCsrfTokenSet' ] ) ) {
 			// 1.37+
 			// keep the fully qualified class name here since a use statement would break in 1.35-1.36
+			// @phan-suppress-next-line PhanUndeclaredMethod
 			$editToken = $this->getContext()->getCsrfTokenSet()->getToken();
+			// @phan-suppress-next-line PhanUndeclaredClassConstant
 			$editTokenFieldName = \MediaWiki\Session\CsrfTokenSet::DEFAULT_FIELD_NAME;
 		} else {
 			// 1.35-1.36
