@@ -5,6 +5,7 @@ namespace WikiMirror\Mirror;
 use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Interwiki\InterwikiLookup;
+use MediaWiki\Page\WikiPageFactory;
 use Status;
 use Title;
 use WANObjectCache;
@@ -44,6 +45,9 @@ class Mirror {
 	/** @var ILoadBalancer */
 	protected $loadBalancer;
 
+	/** @var WikiPageFactory */
+	protected $wikiPageFactory;
+
 	/**
 	 * Mirror constructor.
 	 *
@@ -51,6 +55,7 @@ class Mirror {
 	 * @param HttpRequestFactory $httpRequestFactory
 	 * @param WANObjectCache $wanObjectCache
 	 * @param ILoadBalancer $loadBalancer
+	 * @param WikiPageFactory $wikiPageFactory
 	 * @param ServiceOptions $options
 	 */
 	public function __construct(
@@ -58,6 +63,7 @@ class Mirror {
 		HttpRequestFactory $httpRequestFactory,
 		WANObjectCache $wanObjectCache,
 		ILoadBalancer $loadBalancer,
+		WikiPageFactory $wikiPageFactory,
 		ServiceOptions $options
 	) {
 		$options->assertRequiredOptions( self::CONSTRUCTOR_OPTIONS );
@@ -65,6 +71,7 @@ class Mirror {
 		$this->httpRequestFactory = $httpRequestFactory;
 		$this->cache = $wanObjectCache;
 		$this->loadBalancer = $loadBalancer;
+		$this->wikiPageFactory = $wikiPageFactory;
 		$this->options = $options;
 	}
 
@@ -154,6 +161,139 @@ class Mirror {
 	}
 
 	/**
+	 * Retrieve meta information about the remote wiki, potentially from cache.
+	 *
+	 * @return Status
+	 */
+	public function getCachedSiteInfo() {
+		wfDebugLog( 'WikiMirror', "Retrieving cached site info." );
+		$value = $this->cache->getWithSetCallback(
+			$this->cache->makeKey( 'mirror', 'remote-site-info' ),
+			$this->options->get( 'TranscludeCacheExpiry' ),
+			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) {
+				wfDebugLog( 'WikiMirror', "Site info not found in cache." );
+				return $this->getLiveSiteInfo();
+			},
+			[
+				'pcTTL' => $this->cache::TTL_PROC_LONG,
+				'pcGroup' => self::PC_GROUP,
+				'staleTTL' => $this->cache::TTL_DAY
+			]
+		);
+
+		if ( !$value ) {
+			return Status::newFatal( 'wikimirror-api-error' );
+		}
+
+		return Status::newGood( new SiteInfoResponse( $this, $value ) );
+	}
+
+	/**
+	 * Determine whether or not the given title is eligible to be mirrored.
+	 *
+	 * @param Title $title
+	 * @return bool True if the title can be mirrored, false if not.
+	 */
+	public function canMirror( Title $title ) {
+		static $cache = [];
+		$cacheKey = $title->getPrefixedDBkey();
+
+		if ( isset( $cache[$cacheKey] ) ) {
+			return $cache[$cacheKey];
+		}
+
+		if ( $title->exists() && $title->getLatestRevID() ) {
+			// page exists locally
+			$cache[$cacheKey] = false;
+			return false;
+		}
+
+		$dbr = $this->loadBalancer->getConnection( DB_REPLICA );
+		$result = $dbr->selectField( 'forked_titles', 'COUNT(1)', [
+			'ft_namespace' => $title->getNamespace(),
+			'ft_title' => $title->getDBkey()
+		], __METHOD__ );
+
+		if ( $result > 0 ) {
+			// title has been forked locally despite the page not existing
+			$cache[$cacheKey] = false;
+			return false;
+		}
+
+		if ( !$this->getCachedPage( $title )->isOK() ) {
+			// not able to successfully fetch the mirrored page
+			$cache[$cacheKey] = false;
+			return false;
+		}
+
+		$cache[$cacheKey] = true;
+		return true;
+	}
+
+	/**
+	 * Call remote VE API and retrieve the results from it.
+	 * This is not cached.
+	 *
+	 * @param array $params Params to pass through to remote API
+	 * @return array|false API response, or false on failure
+	 */
+	public function getVisualEditorApi( array $params ) {
+		$params['action'] = 'visualeditor';
+		$params['format'] = 'json';
+		$params['formatversion'] = 2;
+
+		$result = $this->getRemoteApiResponse( $params, __METHOD__ );
+		if ( $result !== false ) {
+			// fix <base> tag in $result['content']
+			$base = $this->options->get( 'Server' ) .
+				str_replace( '$1', '', $this->options->get( 'ArticlePath' ) );
+
+			$result['content'] = preg_replace(
+				'#<base href=".*?"#',
+				"<base href=\"{$base}\"",
+				$result['content']
+			);
+
+			// fix load.php URLs in $result['content']
+			$script = $this->options->get( 'ScriptPath' );
+			$result['content'] = preg_replace(
+				'#="[^"]*?/load.php#',
+				"=\"{$script}/load.php",
+				$result['content']
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Convenience function to retrieve the redirect target of a potentially mirrored page.
+	 *
+	 * @param Title $title Title to retrieve redirect target for
+	 * @return Title|null Redirect target, or null if this Title is not a redirect.
+	 */
+	public function getRedirectTarget( Title $title ) {
+		if ( !$this->canMirror( $title ) ) {
+			// page is local, call WikiPage::getRedirectTarget if it exists
+			if ( !$title->exists() ) {
+				return null;
+			}
+
+			$wikiPage = $this->wikiPageFactory->newFromTitle( $title );
+			return $wikiPage->getRedirectTarget();
+		}
+
+		$status = $this->getCachedPage( $title );
+		if ( !$status->isOK() ) {
+			return null;
+		}
+
+		/** @var PageInfoResponse $pageInfo */
+		$pageInfo = $status->getValue();
+		return $pageInfo->redirect;
+	}
+
+	/**
 	 * Fetch rendered HTML and raw wikitext from remote wiki API.
 	 * Do not directly call this; call getCachedText() instead.
 	 *
@@ -215,7 +355,7 @@ class Mirror {
 	 * 		array of information from remote wiki on success
 	 * @see Mirror::getCachedText()
 	 */
-	public function getLiveText( Title $title ) {
+	private function getLiveText( Title $title ) {
 		$status = $this->getCachedPage( $title );
 		if ( !$status->isOK() ) {
 			return null;
@@ -340,34 +480,6 @@ class Mirror {
 	}
 
 	/**
-	 * Retrieve meta information about the remote wiki, potentially from cache.
-	 *
-	 * @return Status
-	 */
-	public function getCachedSiteInfo() {
-		wfDebugLog( 'WikiMirror', "Retrieving cached site info." );
-		$value = $this->cache->getWithSetCallback(
-			$this->cache->makeKey( 'mirror', 'remote-site-info' ),
-			$this->options->get( 'TranscludeCacheExpiry' ),
-			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) {
-				wfDebugLog( 'WikiMirror', "Site info not found in cache." );
-				return $this->getLiveSiteInfo();
-			},
-			[
-				'pcTTL' => $this->cache::TTL_PROC_LONG,
-				'pcGroup' => self::PC_GROUP,
-				'staleTTL' => $this->cache::TTL_DAY
-			]
-		);
-
-		if ( !$value ) {
-			return Status::newFatal( 'wikimirror-api-error' );
-		}
-
-		return Status::newGood( new SiteInfoResponse( $this, $value ) );
-	}
-
-	/**
 	 * Retrieve meta information about the remote wiki.
 	 *
 	 * @return false|array
@@ -382,73 +494,6 @@ class Mirror {
 		];
 
 		return $this->getRemoteApiResponse( $params, __METHOD__ );
-	}
-
-	/**
-	 * Determine whether or not the given title is eligible to be mirrored.
-	 *
-	 * @param Title $title
-	 * @return bool True if the title can be mirrored, false if not.
-	 */
-	public function canMirror( Title $title ) {
-		if ( $title->exists() && $title->getLatestRevID() ) {
-			// page exists locally
-			return false;
-		}
-
-		$dbr = $this->loadBalancer->getConnection( DB_REPLICA );
-		$result = $dbr->selectField( 'forked_titles', 'COUNT(1)', [
-			'ft_namespace' => $title->getNamespace(),
-			'ft_title' => $title->getDBkey()
-		], __METHOD__ );
-
-		if ( $result > 0 ) {
-			// title has been forked locally despite the page not existing
-			return false;
-		}
-
-		if ( !$this->getCachedPage( $title )->isOK() ) {
-			// not able to successfully fetch the mirrored page
-			return false;
-		}
-
-		return true;
-	}
-
-	/**
-	 * Call remote VE API and retrieve the results from it.
-	 * This is not cached.
-	 *
-	 * @param array $params Params to pass through to remote API
-	 * @return array|false API response, or false on failure
-	 */
-	public function getVisualEditorApi( array $params ) {
-		$params['action'] = 'visualeditor';
-		$params['format'] = 'json';
-		$params['formatversion'] = 2;
-
-		$result = $this->getRemoteApiResponse( $params, __METHOD__ );
-		if ( $result !== false ) {
-			// fix <base> tag in $result['content']
-			$base = $this->options->get( 'Server' ) .
-				str_replace( '$1', '', $this->options->get( 'ArticlePath' ) );
-
-			$result['content'] = preg_replace(
-				'#<base href=".*?"#',
-				"<base href=\"{$base}\"",
-				$result['content']
-			);
-
-			// fix load.php URLs in $result['content']
-			$script = $this->options->get( 'ScriptPath' );
-			$result['content'] = preg_replace(
-				'#="[^"]*?/load.php#',
-				"=\"{$script}/load.php",
-				$result['content']
-			);
-		}
-
-		return $result;
 	}
 
 	/**

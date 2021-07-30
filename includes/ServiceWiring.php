@@ -11,6 +11,7 @@ return [
 			$services->getHttpRequestFactory(),
 			$services->getMainWANObjectCache(),
 			$services->getDBLoadBalancer(),
+			$services->getWikiPageFactory(),
 			new ServiceOptions(
 				Mirror::CONSTRUCTOR_OPTIONS,
 				$services->getMainConfig()

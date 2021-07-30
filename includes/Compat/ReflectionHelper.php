@@ -55,4 +55,27 @@ class ReflectionHelper {
 				'The WikiMirror extension is not compatible with your MediaWiki version', 0, $e );
 		}
 	}
+
+	/**
+	 * Stores the value of a private property via Reflection
+	 *
+	 * @param string $class Class name
+	 * @param string $property Property Name
+	 * @phpcs:ignore MediaWiki.Commenting.FunctionComment.ObjectTypeHintParam
+	 * @param object|null $object Object to set property value for, or null for a static property
+	 * @param mixed $value Value of property to set
+	 * @throws MWException
+	 */
+	public static function setPrivateProperty( string $class, string $property, ?object $object, $value ) {
+		try {
+			$reflection = new ReflectionClass( $class );
+			$property = $reflection->getProperty( $property );
+			$property->setAccessible( true );
+			$property->setValue( $object, $value );
+		} catch ( ReflectionException $e ) {
+			// wrap the ReflectionException into a MWException for friendlier error display
+			throw new MWException(
+				'The WikiMirror extension is not compatible with your MediaWiki version', 0, $e );
+		}
+	}
 }

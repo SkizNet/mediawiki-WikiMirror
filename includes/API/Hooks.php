@@ -7,14 +7,23 @@ namespace WikiMirror\API;
 
 use ApiBase;
 use ApiModuleManager;
+use ApiQuery;
+use ApiQueryBacklinksprop;
 use ApiQueryRevisions;
 use ExtensionRegistry;
+use IApiMessage;
+use MediaWiki\Api\Hook\ApiCheckCanExecuteHook;
 use MediaWiki\Api\Hook\ApiMain__moduleManagerHook;
 use MediaWiki\Api\Hook\APIQueryAfterExecuteHook;
+use Message;
+use MWException;
 use Title;
+use User;
+use WikiMirror\Compat\ReflectionHelper;
 use WikiMirror\Mirror\Mirror;
 
 class Hooks implements
+	ApiCheckCanExecuteHook,
 	ApiMain__moduleManagerHook,
 	APIQueryAfterExecuteHook
 {
@@ -31,29 +40,46 @@ class Hooks implements
 	}
 
 	/**
-	 * Override API action=visualeditor to accomodate mirrored pages
+	 * Replace the ApiPageSet with our custom implementation in the ApiQuery module.
+	 * This has nothing to do with permissions, but this is the only hook that is
+	 * reliably executed after the module is constructed but before execute is called on it.
+	 *
+	 * @param ApiBase $module
+	 * @param User $user Current user
+	 * @param IApiMessage|Message|string|array &$message API message to die with:
+	 *  ApiMessage, Message, string message key, or key+parameters array to
+	 *  pass to ApiBase::dieWithError().
+	 * @return void To continue hook execution
+	 * @throws MWException On error
+	 */
+	public function onApiCheckCanExecute( $module, $user, &$message ) {
+		if ( $module instanceof ApiQuery ) {
+			$pageSet = new ApiPageSet( $module, $this->mirror );
+			ReflectionHelper::setPrivateProperty( ApiQuery::class, 'mPageSet', $module, $pageSet );
+		}
+	}
+
+	/**
+	 * Override API action=visualeditor to accommodate mirrored pages
 	 *
 	 * @param ApiModuleManager $moduleManager
 	 * @return void
 	 */
 	public function onApiMain__moduleManager( $moduleManager ) {
-		// If VE isn't loaded, bail out early
 		$extensionRegistry = ExtensionRegistry::getInstance();
-		if ( !$extensionRegistry->isLoaded( 'VisualEditor' )
-			|| !$moduleManager->isDefined( 'visualeditor', 'action' )
+		if ( $extensionRegistry->isLoaded( 'VisualEditor' )
+			&& $moduleManager->isDefined( 'visualeditor', 'action' )
 		) {
-			return;
+			// ObjectFactory spec here should be kept in sync with VE extension.json
+			// with an additional Mirror service tacked on the end
+			$moduleManager->addModule( 'visualeditor', 'action', [
+				'class' => 'WikiMirror\API\ApiVisualEditor',
+				'services' => [
+					'UserNameUtils',
+					'Mirror'
+				]
+			] );
 		}
-
-		// ObjectFactory spec here should be kept in sync with VE extension.json
-		// with an additional Mirror service tacked on the end
-		$moduleManager->addModule( 'visualeditor', 'action', [
-			'class' => 'WikiMirror\API\ApiVisualEditor',
-			'services' => [
-				'UserNameUtils',
-				'Mirror'
-			]
-		] );
 	}
 
 	/**
@@ -65,10 +91,19 @@ class Hooks implements
 	 * @return void
 	 */
 	public function onAPIQueryAfterExecute( $module ) {
-		if ( !( $module instanceof ApiQueryRevisions ) ) {
-			return;
+		if ( $module instanceof ApiQueryRevisions ) {
+			$this->addMirroredRevisionInfo( $module );
+		} elseif ( $module instanceof ApiQueryBacklinksprop && $module->getModuleName() === 'redirects' ) {
+			$this->addMirroredRedirectInfo( $module );
 		}
+	}
 
+	/**
+	 * Add information about mirrored revisions to action=query&prop=revisions.
+	 *
+	 * @param ApiQueryRevisions $module
+	 */
+	private function addMirroredRevisionInfo( ApiQueryRevisions $module ) {
 		$result = $module->getResult();
 		$pages = $result->getResultData( [ 'query', 'pages' ] );
 		if ( $pages === null || !is_array( $pages ) ) {
@@ -78,7 +113,13 @@ class Hooks implements
 		foreach ( $pages as $i => $page ) {
 			if ( isset( $page['missing'] ) && isset( $page['known'] ) && $page['missing'] && $page['known'] ) {
 				// page both missing and known means it could be a mirrored page
-				$title = Title::makeTitleSafe( $page['ns'], $page['title'] );
+				// title is already prefixed, so strip the prefix if we have a namespace
+				$pageTitle = $page['title'];
+				if ( $page['ns'] !== 0 ) {
+					$pageTitle = substr( $pageTitle, strpos( $pageTitle, ':' ) + 1 );
+				}
+
+				$title = Title::makeTitleSafe( $page['ns'], $pageTitle );
 				if ( $title === null || !$this->mirror->canMirror( $title ) ) {
 					continue;
 				}
@@ -110,6 +151,31 @@ class Hooks implements
 					]
 				] );
 			}
+		}
+	}
+
+	/**
+	 * Add information about mirrored redirects to action=query&prop=redirects.
+	 *
+	 * @param ApiQueryBacklinksprop $module
+	 */
+	private function addMirroredRedirectInfo( ApiQueryBacklinksprop $module ) {
+		$result = $module->getResult();
+		$pages = $result->getResultData( [ 'query', 'pages' ] );
+		if ( $pages === null || !is_array( $pages ) ) {
+			return;
+		}
+
+		// Check for mirrored redirects to these pages and add them in.
+		// We somehow need to honor query limits/continuations as well.
+		// Mirrored redirects are listed at the end (after all regular redirects are enumerated).
+		// This information is not currently cached since it applies to every page,
+		// not just mirrored pages, so we can't use the existing mirror cache.
+		foreach ( $pages as $i => $page ) {
+			$pageNs = $page['ns'];
+			$pageTitle = substr( $page['title'], strpos( $page['title'], ':' ) + 1 );
+			$title = Title::makeTitleSafe( $pageNs, $pageTitle );
+			$redirects = $this->mirror->getRedirects( $title );
 		}
 	}
 }

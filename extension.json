@@ -26,6 +26,7 @@
 		}
 	},
 	"Hooks": {
+		"ApiCheckCanExecute": "api",
 		"ApiMain::moduleManager": "api",
 		"APIQueryAfterExecute": "api",
 		"getUserPermissionsErrors": "mirror",
