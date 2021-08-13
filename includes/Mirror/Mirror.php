@@ -5,7 +5,8 @@ namespace WikiMirror\Mirror;
 use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Interwiki\InterwikiLookup;
-use MediaWiki\Page\WikiPageFactory;
+use MediaWiki\MediaWikiServices;
+use MWException;
 use Status;
 use Title;
 use WANObjectCache;
@@ -13,6 +14,7 @@ use Wikimedia\Rdbms\ILoadBalancer;
 use WikiMirror\API\PageInfoResponse;
 use WikiMirror\API\ParseResponse;
 use WikiMirror\API\SiteInfoResponse;
+use WikiPage;
 
 class Mirror {
 	/** @var string[] */
@@ -45,9 +47,6 @@ class Mirror {
 	/** @var ILoadBalancer */
 	protected $loadBalancer;
 
-	/** @var WikiPageFactory */
-	protected $wikiPageFactory;
-
 	/**
 	 * Mirror constructor.
 	 *
@@ -55,7 +54,6 @@ class Mirror {
 	 * @param HttpRequestFactory $httpRequestFactory
 	 * @param WANObjectCache $wanObjectCache
 	 * @param ILoadBalancer $loadBalancer
-	 * @param WikiPageFactory $wikiPageFactory
 	 * @param ServiceOptions $options
 	 */
 	public function __construct(
@@ -63,7 +61,6 @@ class Mirror {
 		HttpRequestFactory $httpRequestFactory,
 		WANObjectCache $wanObjectCache,
 		ILoadBalancer $loadBalancer,
-		WikiPageFactory $wikiPageFactory,
 		ServiceOptions $options
 	) {
 		$options->assertRequiredOptions( self::CONSTRUCTOR_OPTIONS );
@@ -71,7 +68,6 @@ class Mirror {
 		$this->httpRequestFactory = $httpRequestFactory;
 		$this->cache = $wanObjectCache;
 		$this->loadBalancer = $loadBalancer;
-		$this->wikiPageFactory = $wikiPageFactory;
 		$this->options = $options;
 	}
 
@@ -271,6 +267,7 @@ class Mirror {
 	 *
 	 * @param Title $title Title to retrieve redirect target for
 	 * @return Title|null Redirect target, or null if this Title is not a redirect.
+	 * @throws MWException On internal error
 	 */
 	public function getRedirectTarget( Title $title ) {
 		if ( !$this->canMirror( $title ) ) {
@@ -279,7 +276,14 @@ class Mirror {
 				return null;
 			}
 
-			$wikiPage = $this->wikiPageFactory->newFromTitle( $title );
+			if ( method_exists( '\MediaWiki\MediaWikiServices', 'getWikiPageFactory' ) ) {
+				// 1.36+
+				$wikiPage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
+			} else {
+				// 1.35
+				$wikiPage = WikiPage::factory( $title );
+			}
+
 			return $wikiPage->getRedirectTarget();
 		}
 

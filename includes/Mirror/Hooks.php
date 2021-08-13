@@ -140,7 +140,7 @@ class Hooks implements
 	 * @return void This hook must not abort, it must return no value
 	 * @throws MWException
 	 */
-	public function onSkinTemplateNavigation__Universal( $sktemplate, &$links ) : void {
+	public function onSkinTemplateNavigation__Universal( $sktemplate, &$links ): void {
 		$title = $sktemplate->getRelevantTitle();
 		$user = $sktemplate->getUser();
 		$skinName = $sktemplate->getSkinName();
