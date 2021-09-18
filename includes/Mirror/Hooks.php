@@ -148,12 +148,19 @@ class Hooks implements
 		if ( $this->mirror->canMirror( $title ) ) {
 			if ( $this->permManager->quickUserCan( 'fork', $user, $title ) ) {
 				$forkTitle = SpecialPage::getTitleFor( 'Fork', $title->getPrefixedDBkey() );
-				$links['actions']['fork'] = [
+				$links['views']['fork'] = [
 					'class' => $sktemplate->getTitle()->isSpecial( 'Fork' ) ? 'selected' : false,
 					'href' => $forkTitle->getLocalURL(),
 					'text' => wfMessageFallback( "$skinName-action-fork", 'wikimirror-action-fork' )
 						->setContext( $sktemplate->getContext() )->text()
 				];
+
+				// if the user can watch the page, ensure Fork is before the watchlist star
+				if ( array_key_exists( 'watch', $links['views'] ) ) {
+					$watch = $links['views']['watch'];
+					unset( $links['views']['watch'] );
+					$links['views']['watch'] = $watch;
+				}
 			}
 		}
 	}

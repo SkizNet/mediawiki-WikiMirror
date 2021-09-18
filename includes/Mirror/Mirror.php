@@ -278,6 +278,7 @@ class Mirror {
 
 			if ( method_exists( '\MediaWiki\MediaWikiServices', 'getWikiPageFactory' ) ) {
 				// 1.36+
+				// @phan-suppress-next-line PhanUndeclaredMethod
 				$wikiPage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
 			} else {
 				// 1.35

@@ -12,20 +12,13 @@ namespace {
 namespace WikiMirror\Maintenance {
 
 	use Exception;
-	use GuzzleHttpRequest;
 	use Maintenance;
-	use MediaWiki\MediaWikiServices;
 	use MediaWiki\Shell\Shell;
-	use ReflectionClass;
-	use WikiMirror\Compat\CurlHandler;
 
 	// phpcs:ignore MediaWiki.Files.ClassMatchesFilename.WrongCase
 	class UpdateRemotePage extends Maintenance {
 		/** @var array */
 		private $originalOptions;
-
-		/** @var bool */
-		private $isChild = false;
 
 		/** @var int */
 		private $total = -1;
@@ -43,8 +36,15 @@ namespace WikiMirror\Maintenance {
 			);
 
 			$this->addOption(
-				'dump',
-				'URL or file path of the dump containing valid page names',
+				'page',
+				'URL or file path of the dump containing the page table',
+				true,
+				true
+			);
+
+			$this->addOption(
+				'redirect',
+				'URL or file path of the dump containing the redirect table',
 				true,
 				true
 			);
@@ -65,112 +65,46 @@ namespace WikiMirror\Maintenance {
 		 * @throws Exception
 		 */
 		public function execute() {
-			// delete records older than 3 days
-			$stale = wfTimestamp( TS_MW, time() - 259200 );
+			// delete records older than 7 days
+			$stale = wfTimestamp( TS_MW, time() - 604800 );
 			$batchSize = $this->getBatchSize();
 			$skip = $this->getOption( 'skip' );
 			$count = $this->getOption( 'count' );
+			$childPath = $this->getOption( 'path' );
 
 			if ( $batchSize > 0 && $skip !== null && $count !== null ) {
 				// we're a child process executing in batched mode
-				$this->isChild = true;
-			} else {
-				// non-batched mode or we're the parent
-				$count = 0;
-				$skip = 0;
+				$this->fetchFromDump( $childPath, $skip, $count );
+				return true;
 			}
 
-			$path = $this->getOption( 'dump' );
-			$haveTempFile = false;
-			if ( wfParseUrl( $path ) !== false ) {
-				// we were passed a URL to download;
-				// this will generate a temporary file we need to clean up
-				$path = $this->downloadDump( $path );
-				$haveTempFile = true;
-			}
+			// non-batched mode or we're the parent
+			$count = 0;
+			$skip = 0;
 
-			try {
-				if ( !$this->isChild ) {
-					$this->outputChanneled( 'Calculating dataset size...' );
-					$this->calculateTotalAndOffsets( $path );
-					$this->outputChanneled( 'Loading data...' );
-				}
+			$paths = [
+				'page' => $this->getOption( 'page' ),
+				'redirect' => $this->getOption( 'redirect' )
+			];
 
-				if ( $batchSize > 0 && !$this->isChild ) {
+			foreach ( $paths as $type => $path ) {
+				$this->outputChanneled( "Calculating {$type} dataset size..." );
+				$this->calculateTotalAndOffsets( $path );
+				$this->outputChanneled( "Loading {$type} data..." );
+
+				if ( $batchSize > 0 ) {
 					$this->spawnSubprocesses( $path );
 				} else {
 					$this->fetchFromDump( $path, $skip, $count );
 				}
-			} finally {
-				if ( $haveTempFile ) {
-					// phpcs:ignore Generic.PHP.NoSilencedErrors.Discouraged
-					@unlink( $path );
-				}
+
+				$this->outputChanneled( "{$type} data loaded successfully!" );
 			}
 
-			if ( !$this->isChild ) {
-				$this->outputChanneled( 'Data loaded successfully!' );
-				$this->deleteStaleRecords( $stale );
-			}
+			$this->outputChanneled( 'Deleting stale pages...' );
+			$this->deleteStaleRecords( $stale );
 
 			return true;
-		}
-
-		/**
-		 * Downloads a dump file from the passed-in URL, displaying a progress meter
-		 * to the user.
-		 *
-		 * Example URL: https://dumps.wikimedia.org/enwiki/20210320/enwiki-20210320-all-titles.gz
-		 *
-		 * @param string $remote URL to download dump from
-		 * @return string Full path of downloaded dump
-		 * @throws Exception on error
-		 */
-		private function downloadDump( string $remote ) {
-			$requestFactory = MediaWikiServices::getInstance()->getHttpRequestFactory();
-			$tmpFile = tempnam( wfTempDir(), 'wmr' );
-
-			try {
-				// MediaWiki is broken and doesn't actually pass the timeout to Guzzle correctly,
-				// so the default timeout is always used. Fix that here.
-				$handler = new CurlHandler( [
-					CURLOPT_TIMEOUT => 0
-				] );
-
-				$http = $requestFactory->create( $remote, [
-					'sink' => $tmpFile,
-					'handler' => $handler
-				], __METHOD__ );
-
-				// set up some options that aren't directly exposed, such as a progress meter
-				if ( $http instanceof GuzzleHttpRequest ) {
-					$guzzleClass = new ReflectionClass( $http );
-					$guzzleOptions = $guzzleClass->getProperty( 'guzzleOptions' );
-					$guzzleOptions->setAccessible( true );
-					$currentOptions = $guzzleOptions->getValue( $http );
-					$currentOptions['progress'] = [ $this, 'progress' ];
-					$guzzleOptions->setValue( $http, $currentOptions );
-				} else {
-					// someone decided to change the default http engine
-					// this is deprecated yet still supported in core, but unsupported here
-					// we can remove this once the ability to configure the http engine is removed
-					$this->fatalError( 'The HTTP engine is not Guzzle; do not modify the default engine' );
-				}
-
-				$this->outputChanneled( "Downloading $remote..." );
-				$res = $http->execute();
-				if ( !$res->isOK() ) {
-					$this->fatalError( $res->getMessage()->text() );
-				}
-
-				$this->outputChanneled( 'Download complete!' );
-			} catch ( Exception $e ) {
-				// phpcs:ignore Generic.PHP.NoSilencedErrors.Discouraged
-				@unlink( $tmpFile );
-				throw $e;
-			}
-
-			return $tmpFile;
 		}
 
 		/**
@@ -188,21 +122,92 @@ namespace WikiMirror\Maintenance {
 				$this->fatalError( 'Could not open dump file for reading' );
 			}
 
+			// we implement a simple state machine to count the number of tuples in an INSERT line;
+			// this is also doable via regex but that ended up being more complicated to implement.
+			// note that this isn't a perfect SQL parser and will accept certain invalid constructions, but
+			// we assume the underlying .sql is valid and in mysqldump format so this should be good enough.
+			$transitions = [
+				0 => [
+					'(' => 1,
+					'default' => 0
+				],
+				1 => [
+					"'" => 2,
+					')' => 4,
+					'default' => 1
+				],
+				2 => [
+					"'" => 1,
+					'\\' => 3,
+					'default' => 2
+				],
+				3 => [
+					'default' => 2
+				],
+				4 => [
+					',' => 5,
+					';' => 6,
+					'default' => 'reject'
+				],
+				5 => [
+					'(' => 1,
+					'default' => 'reject'
+				],
+				6 => [
+					'default' => 'reject'
+				]
+			];
+
+			// accepting states
+			$accept = [ 6 ];
+
+			// states in which we've fully processed one record and should increment the count
+			$incr = [ 4 ];
+
 			while ( !gzeof( $fh ) ) {
 				$line = gzgets( $fh );
-				if ( $line === false || $line === '' ) {
+				if ( $line === false ) {
 					continue;
 				}
 
-				++$count;
+				$line = trim( $line );
+				if ( substr( $line, 0, 11 ) !== 'INSERT INTO' ) {
+					continue;
+				}
 
-				if ( $count % $batchSize === 0 ) {
-					$offsets[$count] = gztell( $fh );
+				$s = 0;
+				$len = strlen( $line );
+				for ( $i = 0; $i < $len; ++$i ) {
+					$c = $line[$i];
+					if ( isset( $transitions[$s][$c] ) ) {
+						$s = $transitions[$s][$c];
+					} else {
+						$s = $transitions[$s]['default'];
+					}
+
+					if ( $s === 'reject' ) {
+						gzclose( $fh );
+						$this->fatalError( 'Error in dump file, unable to parse.' );
+					}
+
+					if ( in_array( $s, $incr ) ) {
+						++$count;
+
+						if ( $count % $batchSize === 0 ) {
+							$offsets[$count] = gztell( $fh );
+						}
+					}
+				}
+
+				if ( !in_array( $s, $accept ) ) {
+					gzclose( $fh );
+					$this->fatalError( 'Error in dump file, unable to parse.' );
 				}
 			}
 
 			$this->total = $count;
 			$this->offsets = $offsets;
+			gzclose( $fh );
 		}
 
 		/**
@@ -218,7 +223,7 @@ namespace WikiMirror\Maintenance {
 
 			$opts = $this->originalOptions;
 			$opts['batch-size'] = $batchSize;
-			$opts['dump'] = $path;
+			$opts['path'] = $path;
 			$opts['total'] = $this->total;
 
 			for ( $cur = 0; $cur < $this->total; $cur += $batchSize ) {
@@ -342,40 +347,6 @@ namespace WikiMirror\Maintenance {
 
 			$numRows = $db->affectedRows();
 			$this->outputChanneled( "$numRows stale records deleted!" );
-		}
-
-		/**
-		 * Display a progress report for the dump download.
-		 * This is not meant to be called externally, treat it as a private method.
-		 *
-		 * @param int $dlTotal Total bytes to download, or 0 if unknown
-		 * @param int $dlBytes Bytes downloaded thus far
-		 * @param int $upTotal Unused
-		 * @param int $upBytes Unused
-		 */
-		public function progress( $dlTotal, $dlBytes, $upTotal, $upBytes ) {
-			// display a progress report
-			if ( $dlTotal === 0 ) {
-				$total = 'unknown';
-			} elseif ( $dlTotal < 1000000 ) {
-				$total = sprintf( '%.2d KB', $dlTotal / 1000 );
-			} elseif ( $dlTotal < 1000000000 ) {
-				$total = sprintf( '%.2d MB', $dlTotal / 1000000 );
-			} else {
-				$total = sprintf( '%.2d GB', $dlTotal / 1000000000 );
-			}
-
-			if ( $dlBytes < 1000000 ) {
-				$current = sprintf( '%.2d KB', $dlBytes / 1000 );
-			} elseif ( $dlBytes < 1000000000 ) {
-				$current = sprintf( '%.2d MB', $dlBytes / 1000000 );
-			} else {
-				$current = sprintf( '%.2d GB', $dlBytes / 1000000000 );
-			}
-
-			// trailing spaces in output are intentional so that blocky cursors don't cover up
-			// the final dot in the ellipses and to get rid of leftover chars should our output length shrink
-			$this->outputChanneled( "\r$current / $total...            ", 'progress' );
 		}
 	}
 }

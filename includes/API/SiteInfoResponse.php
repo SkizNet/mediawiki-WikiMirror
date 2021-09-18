@@ -42,7 +42,7 @@ class SiteInfoResponse {
 	/**
 	 * Retrieve a mapping of namespace names to numbers on the remote wiki.
 	 *
-	 * @return array|false Map of namespace names to numbers, or false on error
+	 * @return array Map of namespace names to numbers
 	 */
 	public function getNamespaceMap() {
 		$namespaces = [];
