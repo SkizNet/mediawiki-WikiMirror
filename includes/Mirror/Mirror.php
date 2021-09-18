@@ -447,6 +447,10 @@ class Mirror {
 		];
 
 		$data = $this->getRemoteApiResponse( $params, __METHOD__ );
+		if ( $data === false ) {
+			wfDebug( "{$title->getPrefixedText()} could not be fetched from remote mirror." );
+			return null;
+		}
 
 		if ( isset( $data['interwiki'] ) ) {
 			// cache the failure since there's no reason to query for an interwiki multiple times.

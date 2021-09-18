@@ -166,6 +166,9 @@ class Hooks implements
 			return;
 		}
 
+		// Unfinished code beyond this point
+		return;
+
 		// Check for mirrored redirects to these pages and add them in.
 		// We somehow need to honor query limits/continuations as well.
 		// Mirrored redirects are listed at the end (after all regular redirects are enumerated).
