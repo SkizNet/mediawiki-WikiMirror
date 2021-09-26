@@ -21,5 +21,6 @@ class Hooks implements LoadExtensionSchemaUpdatesHook {
 	public function onLoadExtensionSchemaUpdates( $updater ) {
 		$updater->addExtensionTable( 'forked_titles', __DIR__ . '/../../sql/add-forked_titles.sql' );
 		$updater->addExtensionTable( 'remote_page', __DIR__ . '/../../sql/add-remote_page.sql' );
+		$updater->addExtensionTable( 'remote_redirect', __DIR__ . '/../../sql/add-remote_redirect.sql' );
 	}
 }
