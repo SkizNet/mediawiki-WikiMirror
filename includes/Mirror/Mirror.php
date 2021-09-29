@@ -47,6 +47,9 @@ class Mirror {
 	/** @var ILoadBalancer */
 	protected $loadBalancer;
 
+	/** @var array */
+	private $titleCache;
+
 	/**
 	 * Mirror constructor.
 	 *
@@ -69,6 +72,7 @@ class Mirror {
 		$this->cache = $wanObjectCache;
 		$this->loadBalancer = $loadBalancer;
 		$this->options = $options;
+		$this->titleCache = [];
 	}
 
 	/**
@@ -191,16 +195,15 @@ class Mirror {
 	 * @return bool True if the title can be mirrored, false if not.
 	 */
 	public function canMirror( Title $title ) {
-		static $cache = [];
 		$cacheKey = $title->getPrefixedDBkey();
 
-		if ( isset( $cache[$cacheKey] ) ) {
-			return $cache[$cacheKey];
+		if ( isset( $this->titleCache[$cacheKey] ) ) {
+			return $this->titleCache[$cacheKey];
 		}
 
 		if ( $title->exists() && $title->getLatestRevID() ) {
 			// page exists locally
-			$cache[$cacheKey] = false;
+			$this->titleCache[$cacheKey] = false;
 			return false;
 		}
 
@@ -212,18 +215,29 @@ class Mirror {
 
 		if ( $result > 0 ) {
 			// title has been forked locally despite the page not existing
-			$cache[$cacheKey] = false;
+			$this->titleCache[$cacheKey] = false;
 			return false;
 		}
 
 		if ( !$this->getCachedPage( $title )->isOK() ) {
 			// not able to successfully fetch the mirrored page
-			$cache[$cacheKey] = false;
+			$this->titleCache[$cacheKey] = false;
 			return false;
 		}
 
-		$cache[$cacheKey] = true;
+		$this->titleCache[$cacheKey] = true;
 		return true;
+	}
+
+	/**
+	 * Mark that a Title is about to be imported, preventing it from being mirrored.
+	 *
+	 * @param Title $title
+	 * @return void
+	 */
+	public function markForImport( Title $title ) {
+		$cacheKey = $title->getPrefixedDBkey();
+		$this->titleCache[$cacheKey] = false;
 	}
 
 	/**

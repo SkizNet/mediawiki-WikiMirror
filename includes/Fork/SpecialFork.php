@@ -181,7 +181,7 @@ class SpecialFork extends UnlistedSpecialPage {
 		$user = $this->getUser();
 
 		// mark page as forked
-		$dbw->startAtomic( __METHOD__ );
+		$dbw->startAtomic( __METHOD__, $dbw::ATOMIC_CANCELABLE );
 		$dbw->insert( 'forked_titles', [
 			'ft_namespace' => $this->title->getNamespace(),
 			'ft_title' => $this->title->getDBkey(),
@@ -198,6 +198,8 @@ class SpecialFork extends UnlistedSpecialPage {
 			$logType = 'delete';
 		} else {
 			// actually create the page, re-using the import machinery to avoid code duplication
+			// also mark the title as being imported so our mirroring doesn't interfere with the import
+			$this->mirror->markForImport( $this->title );
 			$content = ContentHandler::makeContent( $textInfo->wikitext, $this->title, $revInfo->mainContentModel );
 			$externalUserNames = new ExternalUserNames(
 				$config->get( 'WikiMirrorRemote' ),
@@ -215,7 +217,10 @@ class SpecialFork extends UnlistedSpecialPage {
 				$revision->setUsername( $externalUserNames->applyPrefix( $revInfo->user ) );
 			}
 
-			$this->importer->import( $revision );
+			if ( !$this->importer->import( $revision ) ) {
+				$dbw->cancelAtomic( __METHOD__ );
+				throw new ErrorPageError( 'wikimirror-nofork-title', 'wikimirror-nofork-text' );
+			}
 			$logType = 'import';
 		}
 

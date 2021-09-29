@@ -107,7 +107,9 @@ namespace WikiMirror\Maintenance {
 			$tempFile = $tempFsFileFactory->newTempFSFile( 'urp', 'sql' );
 
 			// these definitions don't do anything but exist to make phan happy
+			/** @noinspection PhpUnusedLocalVariableInspection */
 			$gfh = null;
+			/** @noinspection PhpUnusedLocalVariableInspection */
 			$tfh = null;
 
 			try {
