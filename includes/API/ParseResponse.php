@@ -86,7 +86,7 @@ class ParseResponse {
 			$output->setIndicator( $name, $html );
 		}
 
-		$output->hideNewSection( true );
+		$output->setHideNewSection( true );
 		if ( $this->pageInfo->lastRevisionId ) {
 			$output->setTimestamp( wfTimestamp( TS_MW, $this->pageInfo->lastRevision->timestamp ) );
 		} else {
