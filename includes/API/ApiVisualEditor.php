@@ -7,7 +7,6 @@ use ApiUsageException;
 use MediaWiki\Linker\LinkRenderer;
 use MediaWiki\User\UserNameUtils;
 use MediaWiki\User\UserOptionsLookup;
-use MediaWiki\Watchlist\WatchlistManager;
 use Parser;
 use Title;
 use WikiMirror\Mirror\Mirror;
@@ -27,7 +26,7 @@ class ApiVisualEditor extends \ApiVisualEditor {
 		Parser $parser,
 		LinkRenderer $linkRenderer,
 		UserOptionsLookup $userOptionsLookup,
-		WatchlistManager $watchlistManager,
+		$watchlistManager,
 		Mirror $mirror,
 		$contentTransformer
 	) {
