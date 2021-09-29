@@ -76,7 +76,14 @@ class Hooks implements
 				'class' => 'WikiMirror\API\ApiVisualEditor',
 				'services' => [
 					'UserNameUtils',
+					'Parser',
+					'LinkRenderer',
+					'UserOptionsLookup',
+					'WatchlistManager',
 					'Mirror'
+				],
+				'optional_services' => [
+					'ContentTransformer'
 				]
 			] );
 		}

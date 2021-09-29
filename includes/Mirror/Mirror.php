@@ -277,6 +277,20 @@ class Mirror {
 	}
 
 	/**
+	 * Retrieve all mirrored redirects to the given Title based on cached data.
+	 *
+	 * @param Title $title Title to check incoming redirects for
+	 * @return Title[] All remote-only pages that redirect to the passed-in Title
+	 */
+	public function getRedirects( Title $title ) {
+		// TODO: FINISH
+		// We'll want to query remote_redirects to check for things that redirect to $title
+		// Then we need to map that remote page id to remote_page, while also checking that
+		// the page doesn't exist locally (whether in page or in forked_titles).
+		return [];
+	}
+
+	/**
 	 * Convenience function to retrieve the redirect target of a potentially mirrored page.
 	 *
 	 * @param Title $title Title to retrieve redirect target for

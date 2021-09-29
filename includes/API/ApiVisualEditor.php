@@ -4,7 +4,11 @@ namespace WikiMirror\API;
 
 use ApiMain;
 use ApiUsageException;
+use MediaWiki\Linker\LinkRenderer;
 use MediaWiki\User\UserNameUtils;
+use MediaWiki\User\UserOptionsLookup;
+use MediaWiki\Watchlist\WatchlistManager;
+use Parser;
 use Title;
 use WikiMirror\Mirror\Mirror;
 
@@ -14,13 +18,35 @@ class ApiVisualEditor extends \ApiVisualEditor {
 
 	/**
 	 * @inheritDoc
+	 * @noinspection PhpMethodParametersCountMismatchInspection
 	 */
-	public function __construct( ApiMain $main, $name, UserNameUtils $userNameUtils, Mirror $mirror ) {
+	public function __construct(
+		ApiMain $main,
+		$name,
+		UserNameUtils $userNameUtils,
+		Parser $parser,
+		LinkRenderer $linkRenderer,
+		UserOptionsLookup $userOptionsLookup,
+		WatchlistManager $watchlistManager,
+		Mirror $mirror,
+		$contentTransformer
+	) {
 		$this->mirror = $mirror;
 		// In 1.35, ApiVisualEditor constructor takes 2 args, however it's safe in PHP to pass
 		// too many arguments to a thing, so suppress phan for 1.35 instead of doing a version_compare
+		// Also in 1.37/38, it takes 8 args, where ContentTransformer is only available in 1.37/38
+		// TODO: update above comment once we determine which version is accurate
 		// @phan-suppress-next-line PhanParamTooMany
-		parent::__construct( $main, $name, $userNameUtils );
+		parent::__construct(
+			$main,
+			$name,
+			$userNameUtils,
+			$parser,
+			$linkRenderer,
+			$userOptionsLookup,
+			$watchlistManager,
+			$contentTransformer
+		);
 	}
 
 	/**
