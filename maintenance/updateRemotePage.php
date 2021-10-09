@@ -13,9 +13,7 @@ namespace WikiMirror\Maintenance {
 
 	use Exception;
 	use Maintenance;
-	use MediaWiki\MediaWikiServices;
 	use Wikimedia\AtEase\AtEase;
-	use Wikimedia\Rdbms\IDatabase;
 
 	// phpcs:ignore MediaWiki.Files.ClassMatchesFilename.WrongCase
 	class UpdateRemotePage extends Maintenance {
@@ -24,21 +22,39 @@ namespace WikiMirror\Maintenance {
 			$this->requireExtension( 'WikiMirror' );
 			$this->setBatchSize( 50000 );
 			$this->addDescription(
-				'Update locally-stored tracking data about which pages and namespaces exist on the remote wiki'
+				'Update locally-stored tracking data about which pages and namespaces exist on the remote wiki.'
+				. ' This script is designed to be invoked multiple times; first with --page and --out,'
+				. ' then with --redirect and --out. Each of these invocations will generate a .sql file that should'
+				. ' be read in via the mysql cli. Finally, this script should be invoked a third time with --finish'
+				. ' after those sql files have been read in.'
 			);
 
 			$this->addOption(
 				'page',
 				'File path of the dump containing the page table',
-				true,
+				false,
 				true
 			);
 
 			$this->addOption(
 				'redirect',
 				'File path of the dump containing the redirect table',
-				true,
+				false,
 				true
+			);
+
+			$this->addOption(
+				'out',
+				'File path to write SQL output to',
+				false,
+				true
+			);
+
+			$this->addOption(
+				'finish',
+				'Perform cleanup after independently reading in SQL files',
+				false,
+				false
 			);
 		}
 
@@ -48,7 +64,7 @@ namespace WikiMirror\Maintenance {
 		 * @throws Exception
 		 */
 		public function execute() {
-			$config = MediaWikiServices::getInstance()->getMainConfig();
+			$config = $this->getConfig();
 			$db = $this->getDB( DB_PRIMARY );
 			$db->setSchemaVars( [
 				'wgDBTableOptions' => $config->get( 'DBTableOptions' ),
@@ -57,14 +73,6 @@ namespace WikiMirror\Maintenance {
 
 			$dumpPage = $db->tableName( 'wikimirror_page' );
 			$dumpRedirect = $db->tableName( 'wikimirror_redirect' );
-
-			// avoid log overhead when running in debug mode; these files are huge
-			// and we do *not* want to log these queries because of memory limit concerns
-			$db->clearFlag( IDatabase::DBO_DEBUG );
-
-			// clean up from previously failed runs
-			$db->query( "DROP TABLE IF EXISTS $dumpPage" );
-			$db->query( "DROP TABLE IF EXISTS $dumpRedirect" );
 
 			$paths = [
 				'page' => $this->getOption( 'page' ),
@@ -76,14 +84,34 @@ namespace WikiMirror\Maintenance {
 				'`redirect`' => $dumpRedirect
 			];
 
+			$out = $this->getOption( 'out' );
+			$finish = $this->hasOption( 'finish' );
+			$pathCount = count( array_filter( $paths ) );
+			if ( $pathCount === 2 ) {
+				$this->fatalError( 'You cannot specify both --page and --redirect in the same invocation' );
+			} elseif ( $pathCount === 1 ) {
+				if ( $out === null ) {
+					$this->fatalError( 'The --out option is required when specifying --page or --redirect' );
+				} elseif ( $finish ) {
+					$this->fatalError( 'You cannot specify --finish along with --page or --redirect' );
+				}
+			}
+
 			foreach ( $paths as $type => $path ) {
+				if ( $path === null ) {
+					continue;
+				}
+
 				$this->outputChanneled( "Loading {$type} data..." );
-				$this->fetchFromDump( $db, $path, $replacements );
+				$this->fetchFromDump( $path, $replacements, $out );
 				$this->outputChanneled( "{$type} data loaded successfully!" );
 			}
 
-			$this->outputChanneled( 'Finishing up...' );
-			$db->sourceFile( __DIR__ . '/sql/updateRemotePage.sql' );
+			if ( $finish ) {
+				$this->outputChanneled( 'Finishing up...' );
+				$db->sourceFile( __DIR__ . '/sql/updateRemotePage.sql' );
+			}
+
 			$this->outputChanneled( 'Complete!' );
 
 			return true;
@@ -93,19 +121,16 @@ namespace WikiMirror\Maintenance {
 		 * Fetches a dump from the passed-in file. The dump should be a SQL file with
 		 * CREATE TABLE and INSERT INTO statements. The dump can be gzipped, and will
 		 * be extracted before being loaded. Some transformations are performed on the
-		 * dump file before it is executed as SQL, to use a different table name. Once
-		 * the data is loaded, the new table is renamed to replace the old table.
+		 * dump file before it is executed as SQL, to use a different table name.
+		 * The data is loaded to an output file to execute via the mysql cli, as
+		 * MediaWiki's facilities to execute SQL files choke on large files.
 		 *
-		 * @param IDatabase $db Database to write to
 		 * @param string $path File (possibly gzipped) containing the SQL dump
 		 * @param array $replacements String replacements to make to the SQL dump
+		 * @param string $out File to write the resultant SQL to
 		 * @throws Exception on error
 		 */
-		private function fetchFromDump( IDatabase $db, string $path, array $replacements ) {
-			$db = $this->getDB( DB_PRIMARY );
-			$tempFsFileFactory = MediaWikiServices::getInstance()->getTempFSFileFactory();
-			$tempFile = $tempFsFileFactory->newTempFSFile( 'urp', 'sql' );
-
+		private function fetchFromDump( string $path, array $replacements, string $out ) {
 			// these definitions don't do anything but exist to make phan happy
 			/** @noinspection PhpUnusedLocalVariableInspection */
 			$gfh = null;
@@ -115,7 +140,7 @@ namespace WikiMirror\Maintenance {
 			try {
 				// extract gzipped file to a temporary file
 				$gfh = gzopen( $path, 'rb' );
-				$tfh = fopen( $tempFile->getPath(), 'wb' );
+				$tfh = fopen( $out, 'wb' );
 				if ( $gfh === false ) {
 					$this->fatalError( 'Could not open dump file for reading' );
 				}
@@ -130,13 +155,7 @@ namespace WikiMirror\Maintenance {
 						$this->fatalError( 'Error reading dump file' );
 					}
 
-					$line = trim( $line );
-					if ( substr( $line, 0, 4 ) === 'DROP' ) {
-						// ignore DROP TABLE lines
-						continue;
-					}
-
-					$line = strtr( $line, $replacements );
+					$line = strtr( trim( $line ), $replacements );
 					fwrite( $tfh, $line . "\n" );
 				}
 			} finally {
@@ -151,9 +170,6 @@ namespace WikiMirror\Maintenance {
 
 				AtEase::restoreWarnings();
 			}
-
-			// Create either wikimirror_page or wikimirror_redirect
-			$db->sourceFile( $tempFile->getPath() );
 		}
 	}
 }
