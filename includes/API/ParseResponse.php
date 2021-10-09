@@ -88,6 +88,7 @@ class ParseResponse {
 
 		if ( method_exists( $output, 'setHideNewSection' ) ) {
 			// 1.38+
+			// @phan-suppress-next-line PhanUndeclaredMethod
 			$output->setHideNewSection( true );
 		} else {
 			// 1.35-1.37

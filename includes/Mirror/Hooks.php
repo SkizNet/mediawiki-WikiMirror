@@ -5,8 +5,12 @@
 
 namespace WikiMirror\Mirror;
 
+use HtmlArmor;
 use MediaWiki\Hook\SkinTemplateNavigation__UniversalHook;
 use MediaWiki\Hook\TitleIsAlwaysKnownHook;
+use MediaWiki\Linker\Hook\HtmlPageLinkRendererEndHook;
+use MediaWiki\Linker\LinkRenderer;
+use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Page\Hook\WikiPageFactoryHook;
 use MediaWiki\Permissions\Hook\GetUserPermissionsErrorsHook;
 use MediaWiki\Permissions\PermissionManager;
@@ -20,10 +24,11 @@ use Wikimedia\Rdbms\ILoadBalancer;
 use WikiPage;
 
 class Hooks implements
-	TitleIsAlwaysKnownHook,
 	GetUserPermissionsErrorsHook,
-	WikiPageFactoryHook,
-	SkinTemplateNavigation__UniversalHook
+	HtmlPageLinkRendererEndHook,
+	SkinTemplateNavigation__UniversalHook,
+	TitleIsAlwaysKnownHook,
+	WikiPageFactoryHook
 {
 	/** @var Mirror */
 	private $mirror;
@@ -163,5 +168,37 @@ class Hooks implements
 				}
 			}
 		}
+	}
+
+	/**
+	 * Mark links to mirrored pages as rel=nofollow and give a custom class name for CSS styling
+	 *
+	 * @param LinkRenderer $linkRenderer
+	 * @param LinkTarget $target LinkTarget object that the link is pointing to
+	 * @param bool $isKnown Whether the page is known or not
+	 * @param string|HtmlArmor &$text Contents that the `<a>` tag should have; either a plain,
+	 *   unescaped string or an HtmlArmor object
+	 * @param string[] &$attribs Final HTML attributes of the `<a>` tag, after processing, in
+	 *   associative array form
+	 * @param string &$ret Value to return if the hook returns false
+	 * @return bool True to return an `<a>` element with HTML attributes $attribs and contents $html,
+	 * 	 false to return $ret.
+	 */
+	public function onHtmlPageLinkRendererEnd( $linkRenderer, $target, $isKnown, &$text, &$attribs, &$ret ) {
+		if ( $isKnown && !$target->isExternal() ) {
+			$title = Title::newFromLinkTarget( $target );
+			if ( $this->mirror->canMirror( $title ) ) {
+				if ( array_key_exists( 'class', $attribs ) ) {
+					$classes = $attribs['class'] . ' ';
+				} else {
+					$classes = '';
+				}
+
+				$attribs['rel'] = 'nofollow';
+				$attribs['class'] = $classes . 'mirror-link';
+			}
+		}
+
+		return true;
 	}
 }

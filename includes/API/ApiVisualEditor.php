@@ -33,8 +33,6 @@ class ApiVisualEditor extends \ApiVisualEditor {
 		$this->mirror = $mirror;
 		// In 1.35, ApiVisualEditor constructor takes 2 args, however it's safe in PHP to pass
 		// too many arguments to a thing, so suppress phan for 1.35 instead of doing a version_compare
-		// Also in 1.37/38, it takes 8 args, where ContentTransformer is only available in 1.37/38
-		// TODO: update above comment once we determine which version is accurate
 		// @phan-suppress-next-line PhanParamTooMany
 		parent::__construct(
 			$main,
