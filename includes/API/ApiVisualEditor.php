@@ -26,8 +26,8 @@ class ApiVisualEditor extends \ApiVisualEditor {
 		Parser $parser,
 		LinkRenderer $linkRenderer,
 		UserOptionsLookup $userOptionsLookup,
-		$watchlistManager,
 		Mirror $mirror,
+		$watchlistManager,
 		$contentTransformer
 	) {
 		$this->mirror = $mirror;

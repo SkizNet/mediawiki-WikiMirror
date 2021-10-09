@@ -79,10 +79,10 @@ class Hooks implements
 					'Parser',
 					'LinkRenderer',
 					'UserOptionsLookup',
-					'WatchlistManager',
 					'Mirror'
 				],
 				'optional_services' => [
+					'WatchlistManager',
 					'ContentTransformer'
 				]
 			] );
