@@ -86,7 +86,14 @@ class ParseResponse {
 			$output->setIndicator( $name, $html );
 		}
 
-		$output->hideNewSection( true );
+		if ( method_exists( $output, 'setHideNewSection' ) ) {
+			// 1.38+
+			$output->setHideNewSection( true );
+		} else {
+			// 1.35-1.37
+			$output->hideNewSection( true );
+		}
+
 		if ( $this->pageInfo->lastRevisionId ) {
 			$output->setTimestamp( wfTimestamp( TS_MW, $this->pageInfo->lastRevision->timestamp ) );
 		} else {
