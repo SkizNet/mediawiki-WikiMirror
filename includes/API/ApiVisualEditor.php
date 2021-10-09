@@ -27,8 +27,8 @@ class ApiVisualEditor extends \ApiVisualEditor {
 		LinkRenderer $linkRenderer,
 		UserOptionsLookup $userOptionsLookup,
 		Mirror $mirror,
-		$watchlistManager,
-		$contentTransformer
+		$watchlistManager = null,
+		$contentTransformer = null
 	) {
 		$this->mirror = $mirror;
 		// In 1.35, ApiVisualEditor constructor takes 2 args, however it's safe in PHP to pass
