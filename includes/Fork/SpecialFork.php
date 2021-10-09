@@ -256,6 +256,8 @@ class SpecialFork extends UnlistedSpecialPage {
 				$watchlistManager->addWatch( $user, $newTitle );
 			} else {
 				// 1.35-1.36
+				/** @noinspection PhpUndefinedMethodInspection */
+				// @phan-suppress-next-line PhanUndeclaredMethod
 				$user->addWatch( $newTitle );
 			}
 		}
