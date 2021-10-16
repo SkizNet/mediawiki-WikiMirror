@@ -12,6 +12,7 @@ use MediaWiki\Linker\Hook\HtmlPageLinkRendererEndHook;
 use MediaWiki\Linker\LinkRenderer;
 use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Page\Hook\WikiPageFactoryHook;
+use MediaWiki\Permissions\Hook\GetUserPermissionsErrorsExpensiveHook;
 use MediaWiki\Permissions\Hook\GetUserPermissionsErrorsHook;
 use MediaWiki\Permissions\PermissionManager;
 use MessageSpecifier;
@@ -25,6 +26,7 @@ use WikiPage;
 
 class Hooks implements
 	GetUserPermissionsErrorsHook,
+	GetUserPermissionsErrorsExpensiveHook,
 	HtmlPageLinkRendererEndHook,
 	SkinTemplateNavigation__UniversalHook,
 	TitleIsAlwaysKnownHook,
@@ -73,7 +75,7 @@ class Hooks implements
 		$dbr = $this->loadBalancer->getConnection( DB_REPLICA );
 
 		// is the page forked? If so short-circuit our checks
-		$count = $dbr->selectField( 'forked_titles', 'COUNT(*)', [
+		$count = $dbr->selectField( 'forked_titles', 'COUNT(1)', [
 			'ft_namespace' => $title->getNamespace(),
 			'ft_title' => $title->getDBkey()
 		], __METHOD__ );
@@ -84,7 +86,7 @@ class Hooks implements
 		}
 
 		// right now we assume that foreign namespace ids match local namespace ids
-		$count = $dbr->selectField( 'remote_page', 'COUNT(*)', [
+		$count = $dbr->selectField( 'remote_page', 'COUNT(1)', [
 			'rp_namespace' => $title->getNamespace(),
 			'rp_title' => $title->getDBkey()
 		], __METHOD__ );
@@ -111,7 +113,30 @@ class Hooks implements
 		// fork: lets people fork the page
 		$allowedActions = [ 'read', 'fork' ];
 
-		if ( $this->mirror->canMirror( $title ) && !in_array( $action, $allowedActions ) ) {
+		if ( !in_array( $action, $allowedActions ) && $this->mirror->canMirror( $title, true ) ) {
+			// user doesn't have the ability to perform this action with this page
+			$result = wfMessageFallback( 'wikimirror-no-' . $action, 'wikimirror-no-action' );
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Ensure that users can't perform modification actions on mirrored pages until they're forked
+	 *
+	 * @param Title $title Title being checked
+	 * @param User $user User being checked
+	 * @param string $action Action to check
+	 * @param array|string|MessageSpecifier|false &$result Result of check
+	 * @return bool True to use default logic, false to abort hook processing and use our result
+	 */
+	public function onGetUserPermissionsErrorsExpensive( $title, $user, $action, &$result ) {
+		// read: lets people read the mirrored page
+		// fork: lets people fork the page
+		$allowedActions = [ 'read', 'fork' ];
+
+		if ( !in_array( $action, $allowedActions ) && $this->mirror->canMirror( $title, false ) ) {
 			// user doesn't have the ability to perform this action with this page
 			$result = wfMessageFallback( 'wikimirror-no-' . $action, 'wikimirror-no-action' );
 			return false;

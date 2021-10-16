@@ -1,7 +1,7 @@
 {
 	"name": "WikiMirror",
 	"namemsg": "wikimirror-extensionname",
-	"version": "0.6.2",
+	"version": "0.6.3",
 	"author": [
 		"Ryan Schmidt"
 	],
@@ -30,6 +30,7 @@
 		"ApiMain::moduleManager": "api",
 		"APIQueryAfterExecute": "api",
 		"getUserPermissionsErrors": "mirror",
+		"getUserPermissionsErrorsExpensive": "mirror",
 		"HtmlPageLinkRendererEnd": "mirror",
 		"ImportHandlePageXMLTag": "fork",
 		"LoadExtensionSchemaUpdates": "database",

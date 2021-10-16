@@ -192,9 +192,10 @@ class Mirror {
 	 * Determine whether or not the given title is eligible to be mirrored.
 	 *
 	 * @param Title $title
+	 * @param bool $fast If true, skip expensive checks
 	 * @return bool True if the title can be mirrored, false if not.
 	 */
-	public function canMirror( Title $title ) {
+	public function canMirror( Title $title, bool $fast = false ) {
 		$cacheKey = $title->getPrefixedDBkey();
 
 		if ( isset( $this->titleCache[$cacheKey] ) ) {
@@ -219,7 +220,16 @@ class Mirror {
 			return false;
 		}
 
-		if ( !$this->getCachedPage( $title )->isOK() ) {
+		if ( $fast ) {
+			$result = $dbr->selectField( 'remote_page', 'COUNT(1)', [
+				'rp_namespace' => $title->getNamespace(),
+				'rp_title' => $title->getDBkey()
+			], __METHOD__ );
+
+			$exists = $result > 0;
+			$this->titleCache[$cacheKey] = $exists;
+			return $exists;
+		} elseif ( !$this->getCachedPage( $title )->isOK() ) {
 			// not able to successfully fetch the mirrored page
 			$this->titleCache[$cacheKey] = false;
 			return false;
