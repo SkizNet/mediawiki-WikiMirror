@@ -212,7 +212,7 @@ class Hooks implements
 	public function onHtmlPageLinkRendererEnd( $linkRenderer, $target, $isKnown, &$text, &$attribs, &$ret ) {
 		if ( $isKnown && !$target->isExternal() ) {
 			$title = Title::newFromLinkTarget( $target );
-			if ( $this->mirror->canMirror( $title ) ) {
+			if ( $this->mirror->canMirror( $title, true ) ) {
 				if ( array_key_exists( 'class', $attribs ) ) {
 					$classes = $attribs['class'] . ' ';
 				} else {

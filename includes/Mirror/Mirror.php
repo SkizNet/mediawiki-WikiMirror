@@ -189,6 +189,23 @@ class Mirror {
 	}
 
 	/**
+	 * Determine whether this Title is completely ineligible for mirroring,
+	 * without checking if it exists anywhere.
+	 *
+	 * @param Title $title
+	 * @return bool True if the Title is legal for mirroring, false otherwise
+	 */
+	private function isLegalTitleForMirroring( Title $title ) {
+		$illegal = $title->isExternal()
+			|| $title->getNamespace() < 0
+			|| $title->getNamespace() === NS_MEDIAWIKI
+			|| $title->getNamespace() === NS_FILE
+			|| $title->isUserConfigPage();
+
+		return !$illegal;
+	}
+
+	/**
 	 * Determine whether or not the given title is eligible to be mirrored.
 	 *
 	 * @param Title $title
@@ -200,6 +217,11 @@ class Mirror {
 
 		if ( isset( $this->titleCache[$cacheKey] ) ) {
 			return $this->titleCache[$cacheKey];
+		}
+
+		if ( !$this->isLegalTitleForMirroring( $title ) ) {
+			$this->titleCache[$cacheKey] = false;
+			return false;
 		}
 
 		if ( $title->exists() && $title->getLatestRevID() ) {
@@ -456,12 +478,7 @@ class Mirror {
 		//    pages are handled via InstantCommons instead of this extension.
 		// If any of these checks fail, we do not cache any values
 
-		if ( $title->isExternal()
-			|| $title->getNamespace() < 0
-			|| $title->getNamespace() === NS_MEDIAWIKI
-			|| $title->getNamespace() === NS_FILE
-			|| $title->isUserConfigPage()
-		) {
+		if ( !$this->isLegalTitleForMirroring( $title ) ) {
 			// title refers to an interwiki page or a sensitive page
 			// cache a null value here so we don't need to continually carry out these checks
 			wfDebugLog( 'WikiMirror',
