@@ -36,20 +36,16 @@ class Hooks implements
 	private $mirror;
 	/** @var PermissionManager */
 	private $permManager;
-	/** @var ILoadBalancer */
-	private $loadBalancer;
 
 	/**
 	 * Hooks constructor.
 	 *
 	 * @param Mirror $mirror
 	 * @param PermissionManager $permManager
-	 * @param ILoadBalancer $loadBalancer
 	 */
-	public function __construct( Mirror $mirror, PermissionManager $permManager, ILoadBalancer $loadBalancer ) {
+	public function __construct( Mirror $mirror, PermissionManager $permManager ) {
 		$this->mirror = $mirror;
 		$this->permManager = $permManager;
-		$this->loadBalancer = $loadBalancer;
 	}
 
 	/**
@@ -59,43 +55,13 @@ class Hooks implements
 	 * @param bool|null &$isKnown Set to null to use default logic or a bool to skip default logic
 	 */
 	public function onTitleIsAlwaysKnown( $title, &$isKnown ) {
-		static $cache = [];
-
 		if ( $isKnown !== null ) {
 			// some other extension already set this
 			return;
 		}
 
-		$cacheKey = $title->getPrefixedDBkey();
-		if ( array_key_exists( $cacheKey, $cache ) ) {
-			$isKnown = $cache[$cacheKey];
-			return;
-		}
-
-		$dbr = $this->loadBalancer->getConnection( DB_REPLICA );
-
-		// is the page forked? If so short-circuit our checks
-		$count = $dbr->selectField( 'forked_titles', 'COUNT(1)', [
-			'ft_namespace' => $title->getNamespace(),
-			'ft_title' => $title->getDBkey()
-		], __METHOD__ );
-
-		if ( $count > 0 ) {
-			$cache[$cacheKey] = null;
-			return;
-		}
-
-		// right now we assume that foreign namespace ids match local namespace ids
-		$count = $dbr->selectField( 'remote_page', 'COUNT(1)', [
-			'rp_namespace' => $title->getNamespace(),
-			'rp_title' => $title->getDBkey()
-		], __METHOD__ );
-
-		if ( $count > 0 ) {
-			$cache[$cacheKey] = true;
+		if ( $this->mirror->canMirror( $title, true ) ) {
 			$isKnown = true;
-		} else {
-			$cache[$cacheKey] = null;
 		}
 	}
 

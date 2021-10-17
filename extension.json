@@ -1,7 +1,7 @@
 {
 	"name": "WikiMirror",
 	"namemsg": "wikimirror-extensionname",
-	"version": "0.6.4",
+	"version": "0.6.5",
 	"author": [
 		"Ryan Schmidt"
 	],
@@ -61,8 +61,7 @@
 			"class": "WikiMirror\\Mirror\\Hooks",
 			"services": [
 				"Mirror",
-				"PermissionManager",
-				"DBLoadBalancer"
+				"PermissionManager"
 			]
 		},
 		"service": {
