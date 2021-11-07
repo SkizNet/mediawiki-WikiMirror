@@ -17,11 +17,11 @@ use MediaWiki\Permissions\Hook\GetUserPermissionsErrorsHook;
 use MediaWiki\Permissions\PermissionManager;
 use MessageSpecifier;
 use MWException;
+use RequestContext;
 use SkinTemplate;
 use SpecialPage;
 use Title;
 use User;
-use Wikimedia\Rdbms\ILoadBalancer;
 use WikiPage;
 
 class Hooks implements
@@ -119,7 +119,14 @@ class Hooks implements
 	 * @return bool True to use default logic, false to abort hook processing and use our page
 	 */
 	public function onWikiPageFactory( $title, &$page ) {
-		if ( $this->mirror->canMirror( $title ) ) {
+		// Don't display mirrored pages to crawlers since they aren't supposed to index/follow these anyway
+		// This doesn't detect every bot in existence, but it does get most of the prominent ones
+		$userAgent = RequestContext::getMain()->getRequest()->getHeader( 'User-Agent' );
+		$isBot = $userAgent !== false
+			&& strpos( $userAgent, '+http' ) !== false
+			&& strpos( $userAgent, 'bot' ) !== false;
+
+		if ( !$isBot && $this->mirror->canMirror( $title ) ) {
 			$page = new WikiRemotePage( $title );
 			return false;
 		}
