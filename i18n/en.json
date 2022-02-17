@@ -4,6 +4,7 @@
 			"Ryan Schmidt"
 		]
 	},
+	"apihelp-query+redirects-param-mirror": "Include mirrored redirects in the results. Ignored when this module is used as a generator.",
 	"fork": "Fork page",
 	"logentry-delete-fork": "$1 {{GENDER:$2|deleted}} mirrored page $3",
 	"logentry-import-fork": "$1 {{GENDER:$2|imported}} mirrored page $3 from $4",

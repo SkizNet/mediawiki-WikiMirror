@@ -4,6 +4,7 @@
 			"Ryan Schmidt"
 		]
 	},
+	"apihelp-query+redirects-param-mirror": "Help displayed in the API for the rdmirror parameter",
 	"fork": "Form heading for Special:Fork, also used as button text on Special:Fork.",
 	"logentry-delete-fork": "Log entry used when forking a page without importing revisions; this effectively deletes the page locally.",
 	"logentry-import-fork": "Log entry used when forking a page and importing remote revisions.",
