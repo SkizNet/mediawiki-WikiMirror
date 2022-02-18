@@ -157,18 +157,87 @@ class Hooks implements
 					continue;
 				}
 
+				$params = $module->extractRequestParams();
+
+				$data = [
+					'*' => [
+						'mirrored' => true,
+					],
+					'ids' => [
+						'revid' => 0,
+						'parentid' => 0
+					],
+					'flags' => [
+						'minor' => $revInfo->minor
+					],
+					'timestamp' => [
+						'timestamp' => $revInfo->timestamp,
+					],
+					'user' => [
+						'user' => $revInfo->user,
+					],
+					'userid' => [
+						'userid' => 0
+					],
+					'size' => [
+						'size' => $revInfo->size
+					],
+					'sha1' => ( $revInfo->sha1 !== null )
+						? [ 'sha1' => $revInfo->sha1 ]
+						: [ 'sha1hidden' => true ],
+					'comment' => ( $revInfo->comment !== null )
+						? [ 'comment' => $revInfo->comment ]
+						: [ 'commenthidden' => true ],
+					'parsedcomment' => ( $revInfo->parsedComment !== null )
+						? [ 'parsedcomment' => $revInfo->parsedComment ]
+						: [ 'commenthidden' => true ],
+					'tags' => [
+						'tags' => $revInfo->tags
+					],
+					'roles' => [
+						'roles' => $revInfo->roles
+					]
+				];
+
+				$info = $data['*'];
+				foreach ( $params['prop'] as $prop ) {
+					if ( isset( $data[$prop] ) ) {
+						$info += $data[$prop];
+					}
+				}
+
+				if ( array_intersect( $params['prop'], [ 'slotsize', 'slotsha1', 'contentmodel', 'content' ] ) ) {
+					foreach ( $params['slots'] as $slot ) {
+						$slotdata = [
+							'slotsize' => [ 'size' => $revInfo->getSlotSize( $slot ) ],
+							'slotsha1' => ( $revInfo->getSlotSha1( $slot ) !== null )
+								? [ 'sha1' => $revInfo->getSlotSha1( $slot ) ]
+								: [ 'sha1hidden' => true ],
+							'contentmodel' => [ 'contentmodel' => $revInfo->getSlotContentModel( $slot, true ) ],
+							'content' => ( $revInfo->getSlotContentFormat( $slot ) !== null )
+								? [
+									'contentformat' => $revInfo->getSlotContentFormat( $slot ),
+									'content' => $revInfo->getSlotContent( $slot )
+								]
+								: [
+									'texthidden' => true
+								]
+						];
+
+						$slotInfo = [];
+						foreach ( $params['prop'] as $prop ) {
+							if ( isset( $slotdata[$prop] ) ) {
+								$slotInfo += $slotdata[$prop];
+							}
+						}
+
+						$info['slots'][$slot] = $slotInfo;
+					}
+				}
+
 				// expose revision info, letting user know this is a mirrored page
 				// omit revid/pageid values because we don't want to confuse the API consumer
-				$result->addValue( [ 'query', 'pages', $i ], 'revisions', [
-					[
-						'mirrored' => true,
-						'revid' => 0,
-						'parentid' => 0,
-						'user' => $revInfo->user,
-						'timestamp' => $revInfo->timestamp,
-						'comment' => $revInfo->comment
-					]
-				] );
+				$result->addValue( [ 'query', 'pages', $i ], 'revisions', [ $info ] );
 			}
 		}
 	}

@@ -30,7 +30,7 @@ class Mirror {
 	public const PC_GROUP = 'mirror:1000';
 
 	/** @var int Version of data stored in process cache (increment to invalidate all existing cache entries) */
-	public const PC_VERSION = 2;
+	public const PC_VERSION = 3;
 
 	/** @var ServiceOptions */
 	protected $options;
@@ -482,7 +482,8 @@ class Mirror {
 			'inprop' => 'displaytitle',
 			'rvdir' => 'older',
 			'rvlimit' => 1,
-			'rvprop' => 'ids|timestamp|user|userid|size|slotsize|sha1|slotsha1|contentmodel|comment',
+			'rvprop' => 'ids|timestamp|user|userid|size|slotsize|sha1|slotsha1|contentmodel'
+				. '|flags|comment|parsedcomment|content|tags|roles',
 			'rvslots' => '*',
 			'titles' => $title->getPrefixedText()
 		];
