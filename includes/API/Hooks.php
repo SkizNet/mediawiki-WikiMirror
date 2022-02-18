@@ -34,10 +34,10 @@ class Hooks implements
 	APIQueryAfterExecuteHook
 {
 	/** @var ILoadBalancer */
-	private ILoadBalancer $loadBalancer;
+	private $loadBalancer;
 
 	/** @var Mirror */
-	private Mirror $mirror;
+	private $mirror;
 
 	/**
 	 * Constructor for API hooks.
@@ -211,11 +211,25 @@ class Hooks implements
 
 		// determine how many pieces mirrorcontinue should have (this matches rdcontinue's logic)
 		$pageSet = $module->getQuery()->getPageSet();
-		$pageTitles = $pageSet->getGoodAndMissingPages();
+
+		if ( is_callable( [ $pageSet, 'getGoodAndMissingPages' ] ) ) {
+			// 1.37+
+			// @phan-suppress-next-line PhanUndeclaredMethod
+			$pageTitles = $pageSet->getGoodAndMissingPages();
+		} else {
+			// 1.35-1.36
+			$pageTitles = $pageSet->getGoodAndMissingTitles();
+		}
+
 		$pageMap = $pageSet->getGoodAndMissingTitlesByNamespace();
-		foreach ( $pageSet->getSpecialPages() as $id => $title ) {
-			$pageMap[$title->getNamespace()][$title->getDBkey()] = $id;
-			$pageTitles[] = $title;
+
+		if ( is_callable( [ $pageSet, 'getSpecialPages' ] ) ) {
+			// 1.37+, no fallback for earlier versions
+			// @phan-suppress-next-line PhanUndeclaredMethod
+			foreach ( $pageSet->getSpecialPages() as $id => $title ) {
+				$pageMap[$title->getNamespace()][$title->getDBkey()] = $id;
+				$pageTitles[] = $title;
+			}
 		}
 
 		if ( count( $pageMap ) > 1 ) {
