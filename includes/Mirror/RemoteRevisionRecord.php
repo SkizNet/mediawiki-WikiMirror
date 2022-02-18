@@ -42,7 +42,7 @@ class RemoteRevisionRecord extends RevisionRecord {
 	 * @inheritDoc
 	 */
 	public function getSha1() {
-		return $this->remoteData->lastRevision->sha1;
+		return $this->remoteData->lastRevision->sha1 ?? sha1( '' );
 	}
 
 	/**
