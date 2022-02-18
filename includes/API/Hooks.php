@@ -121,11 +121,12 @@ class Hooks implements
 	 * Add information about mirrored revisions to action=query&prop=revisions.
 	 *
 	 * @param ApiQueryRevisions $module
+	 * @throws ApiUsageException
 	 */
 	private function addMirroredRevisionInfo( ApiQueryRevisions $module ) {
 		$result = $module->getResult();
 		$pages = $result->getResultData( [ 'query', 'pages' ] );
-		if ( !is_array( $pages ) ) {
+		if ( !is_array( $pages ) || $module->isInGeneratorMode() ) {
 			return;
 		}
 
@@ -207,6 +208,21 @@ class Hooks implements
 				}
 
 				if ( array_intersect( $params['prop'], [ 'slotsize', 'slotsha1', 'contentmodel', 'content' ] ) ) {
+					$legacy = false;
+					if ( !$params['slots'] ) {
+						// legacy format
+						$legacy = true;
+						$params['slots'] = [ 'main' ];
+						$encParam = $module->encodeParamName( 'slots' );
+						$name = $module->getModuleName();
+						$parent = $module->getParent();
+						$parentParam = $parent->encodeParamName( $parent->getModuleManager()->getModuleGroup( $name ) );
+						$module->addDeprecation(
+							[ 'apiwarn-deprecation-missingparam', $encParam ],
+							"action=query&{$parentParam}={$name}&!{$encParam}"
+						);
+					}
+
 					foreach ( $params['slots'] as $slot ) {
 						$slotdata = [
 							'slotsize' => [ 'size' => $revInfo->getSlotSize( $slot ) ],
@@ -232,6 +248,11 @@ class Hooks implements
 						}
 
 						$info['slots'][$slot] = $slotInfo;
+					}
+
+					if ( $legacy ) {
+						$info += $info['slots']['main'];
+						unset( $info['slots'] );
 					}
 				}
 
