@@ -11,7 +11,12 @@ use Parser;
 use Title;
 use WikiMirror\Mirror\Mirror;
 
-class ApiVisualEditor extends \ApiVisualEditor {
+// Make \MediaWiki\Extension\VisualEditor\ApiVisualEditor an alias for \ApiVisualEditor on older MWs we support
+if ( !class_exists( '\MediaWiki\Extension\VisualEditor\ApiVisualEditor' ) ) {
+	class_alias( '\ApiVisualEditor', '\MediaWiki\Extension\VisualEditor\ApiVisualEditor' );
+}
+
+class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor {
 	/** @var Mirror */
 	private $mirror;
 

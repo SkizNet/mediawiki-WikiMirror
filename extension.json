@@ -1,7 +1,7 @@
 {
 	"name": "WikiMirror",
 	"namemsg": "wikimirror-extensionname",
-	"version": "0.7.1",
+	"version": "0.8.0",
 	"author": [
 		"Ryan Schmidt"
 	],
@@ -93,10 +93,18 @@
 				"OldRevisionImporter",
 				"UserOptionsLookup"
 			]
+		},
+		"Mirror": {
+			"class": "WikiMirror\\Fork\\SpecialMirror",
+			"services": [
+				"DBLoadBalancer",
+				"Mirror"
+			]
 		}
 	},
 	"LogActionsHandlers": {
 		"delete/fork": "LogFormatter",
+		"delete/mirror": "LogFormatter",
 		"import/fork": "LogFormatter"
 	},
 	"ContentHandlers": {

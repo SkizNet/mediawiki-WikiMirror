@@ -206,6 +206,20 @@ class Mirror {
 	}
 
 	/**
+	 * Determine whether the given title is currently forked.
+	 *
+	 * @param Title $title
+	 * @return bool
+	 */
+	public function isForked( Title $title ) {
+		// prime the title cache
+		$this->canMirror( $title, true );
+
+		$cacheKey = $title->getPrefixedDBkey();
+		return $this->titleCache[$cacheKey] === 'forked';
+	}
+
+	/**
 	 * Determine whether or not the given title is eligible to be mirrored.
 	 *
 	 * @param Title $title
@@ -216,17 +230,18 @@ class Mirror {
 		$cacheKey = $title->getPrefixedDBkey();
 
 		if ( isset( $this->titleCache[$cacheKey] ) ) {
-			return $this->titleCache[$cacheKey];
+			return $this->titleCache[$cacheKey] === 'valid'
+				|| $this->titleCache[$cacheKey] === 'fast_valid';
 		}
 
 		if ( !$this->isLegalTitleForMirroring( $title ) ) {
-			$this->titleCache[$cacheKey] = false;
+			$this->titleCache[$cacheKey] = 'illegal_title';
 			return false;
 		}
 
 		if ( $title->exists() && $title->getLatestRevID() ) {
 			// page exists locally
-			$this->titleCache[$cacheKey] = false;
+			$this->titleCache[$cacheKey] = 'forked';
 			return false;
 		}
 
@@ -238,7 +253,7 @@ class Mirror {
 
 		if ( $result > 0 ) {
 			// title has been forked locally despite the page not existing
-			$this->titleCache[$cacheKey] = false;
+			$this->titleCache[$cacheKey] = 'forked';
 			return false;
 		}
 
@@ -249,15 +264,15 @@ class Mirror {
 			], __METHOD__ );
 
 			$exists = $result > 0;
-			$this->titleCache[$cacheKey] = $exists;
+			$this->titleCache[$cacheKey] = $exists ? 'fast_valid' : 'fast_errored';
 			return $exists;
 		} elseif ( !$this->getCachedPage( $title )->isOK() ) {
 			// not able to successfully fetch the mirrored page
-			$this->titleCache[$cacheKey] = false;
+			$this->titleCache[$cacheKey] = 'errored';
 			return false;
 		}
 
-		$this->titleCache[$cacheKey] = true;
+		$this->titleCache[$cacheKey] = 'valid';
 		return true;
 	}
 

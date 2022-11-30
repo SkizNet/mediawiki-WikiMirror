@@ -165,6 +165,16 @@ class Hooks implements
 					$links['views']['watch'] = $watch;
 				}
 			}
+		} elseif ( $this->mirror->isForked( $title ) && !$title->exists() ) {
+			if ( $this->permManager->quickUserCan( 'delete', $user, $title ) ) {
+				$forkTitle = SpecialPage::getTitleFor( 'Mirror', $title->getPrefixedDBkey() );
+				$links['actions']['mirror'] = [
+					'class' => $sktemplate->getTitle()->isSpecial( 'Mirror' ) ? 'selected' : false,
+					'href' => $forkTitle->getLocalURL(),
+					'text' => wfMessageFallback( "$skinName-action-mirror", 'wikimirror-action-mirror' )
+						->setContext( $sktemplate->getContext() )->text()
+				];
+			}
 		}
 	}
 
