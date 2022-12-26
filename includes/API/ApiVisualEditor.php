@@ -27,7 +27,7 @@ class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor 
 
 	/**
 	 * @param ApiMain $main
-	 * @param $name
+	 * @param string $name
 	 * @param Mirror $mirror
 	 * @param RevisionLookup $revisionLookup
 	 * @param UserNameUtils $userNameUtils
@@ -43,7 +43,7 @@ class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor 
 	 * @param WikiPageFactory $wikiPageFactory
 	 * @param HookContainer $hookContainer
 	 * @param UserFactory $userFactory
-	 * @param \MediaWiki\Extension\VisualEditor\VisualEditorParsoidClientFactory $visualEditorParsoidClientFactory 1.40+
+	 * @param ?\MediaWiki\Extension\VisualEditor\VisualEditorParsoidClientFactory $visualEditorParsoidClientFactory
 	 */
 	public function __construct(
 		ApiMain $main,
@@ -68,6 +68,8 @@ class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor 
 		$this->mirror = $mirror;
 		// Signatures changed in non-compatible ways between 1.39 and 1.40
 		if ( version_compare( MW_VERSION, '1.40', '<' ) ) {
+			// @phan-suppress-next-line PhanTypeMismatchArgument
+			// @phan-suppress-next-line PhanParamTooFew
 			parent::__construct(
 				$main,
 				$name,
@@ -85,6 +87,8 @@ class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor 
 				$userFactory
 			);
 		} else {
+			// @phan-suppress-next-line PhanTypeMismatchArgument
+			// @phan-suppress-next-line PhanParamTooMany
 			parent::__construct(
 				$main,
 				$name,

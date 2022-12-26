@@ -6,10 +6,7 @@ use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Interwiki\InterwikiLookup;
 use MediaWiki\Linker\LinkTarget;
-use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\RedirectLookup;
-use MediaWiki\Page\WikiPageFactory;
-use MWException;
 use Status;
 use Title;
 use WANObjectCache;
@@ -17,7 +14,6 @@ use Wikimedia\Rdbms\ILoadBalancer;
 use WikiMirror\API\PageInfoResponse;
 use WikiMirror\API\ParseResponse;
 use WikiMirror\API\SiteInfoResponse;
-use WikiPage;
 
 class Mirror {
 	/** @var string[] */
