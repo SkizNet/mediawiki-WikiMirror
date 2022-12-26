@@ -108,15 +108,16 @@ class ApiPageSet extends \ApiPageSet {
 				}
 
 				// add redirect entry
-				$redirects[$title->getPrefixedDBkey()] = [ $title, $target ];
+				$targetTitle = Title::newFromLinkTarget( $target );
+				$redirects[$title->getPrefixedDBkey()] = [ $title, $targetTitle ];
 
 				// if we hit a loop, stop
-				if ( isset( $redirects[$target->getPrefixedDBkey()] ) ) {
+				if ( isset( $redirects[$targetTitle->getPrefixedDBkey()] ) ) {
 					break;
 				}
 
 				// continue processing the redirect chain
-				$title = $target;
+				$title = $targetTitle;
 			}
 		}
 

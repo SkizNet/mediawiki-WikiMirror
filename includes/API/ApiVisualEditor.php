@@ -43,7 +43,7 @@ class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor 
 	 * @param WikiPageFactory $wikiPageFactory
 	 * @param HookContainer $hookContainer
 	 * @param UserFactory $userFactory
-	 * @param ?\MediaWiki\Extension\VisualEditor\VisualEditorParsoidClientFactory $visualEditorParsoidClientFactory
+	 * @param \MediaWiki\Extension\VisualEditor\VisualEditorParsoidClientFactory|null $visualEditorParsoidClientFactory
 	 */
 	public function __construct(
 		ApiMain $main,
@@ -63,13 +63,13 @@ class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor 
 		WikiPageFactory $wikiPageFactory,
 		HookContainer $hookContainer,
 		UserFactory $userFactory,
+		// @phan-suppress-next-line PhanUndeclaredTypeParameter
 		$visualEditorParsoidClientFactory = null
 	) {
 		$this->mirror = $mirror;
 		// Signatures changed in non-compatible ways between 1.39 and 1.40
 		if ( version_compare( MW_VERSION, '1.40', '<' ) ) {
-			// @phan-suppress-next-line PhanTypeMismatchArgument
-			// @phan-suppress-next-line PhanParamTooFew
+			// @phan-suppress-next-line PhanTypeMismatchArgument,PhanTypeMismatchArgumentReal,PhanParamTooFew
 			parent::__construct(
 				$main,
 				$name,
@@ -87,8 +87,7 @@ class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor 
 				$userFactory
 			);
 		} else {
-			// @phan-suppress-next-line PhanTypeMismatchArgument
-			// @phan-suppress-next-line PhanParamTooMany
+			// @phan-suppress-next-line PhanTypeMismatchArgument,PhanTypeMismatchArgumentReal,PhanParamTooMany
 			parent::__construct(
 				$main,
 				$name,
