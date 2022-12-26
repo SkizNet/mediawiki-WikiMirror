@@ -82,19 +82,28 @@ class Hooks implements
 			&& $moduleManager->isDefined( 'visualeditor', 'action' )
 		) {
 			// ObjectFactory spec here should be kept in sync with VE extension.json
-			// with an additional Mirror service tacked on the end
+			// with an additional Mirror service tacked on the front
 			$moduleManager->addModule( 'visualeditor', 'action', [
 				'class' => 'WikiMirror\API\ApiVisualEditor',
 				'services' => [
-					'UserNameUtils',
-					'Parser',
-					'LinkRenderer',
-					'UserOptionsLookup',
-					'Mirror'
+					"Mirror",
+					"RevisionLookup",
+					"UserNameUtils",
+					"Parser",
+					"LinkRenderer",
+					"UserOptionsLookup",
+					"WatchlistManager",
+					"ContentTransformer",
+					"SpecialPageFactory",
+					"ReadOnlyMode",
+					"RestrictionStore",
+					"StatsdDataFactory",
+					"WikiPageFactory",
+					"HookContainer",
+					"UserFactory"
 				],
 				'optional_services' => [
-					'WatchlistManager',
-					'ContentTransformer'
+					"VisualEditor.ParsoidClientFactory"
 				]
 			] );
 		}
@@ -301,25 +310,12 @@ class Hooks implements
 
 		// determine how many pieces mirrorcontinue should have (this matches rdcontinue's logic)
 		$pageSet = $module->getQuery()->getPageSet();
-
-		if ( is_callable( [ $pageSet, 'getGoodAndMissingPages' ] ) ) {
-			// 1.37+
-			// @phan-suppress-next-line PhanUndeclaredMethod
-			$pageTitles = $pageSet->getGoodAndMissingPages();
-		} else {
-			// 1.35-1.36
-			$pageTitles = $pageSet->getGoodAndMissingTitles();
-		}
-
+		$pageTitles = $pageSet->getGoodAndMissingPages();
 		$pageMap = $pageSet->getGoodAndMissingTitlesByNamespace();
 
-		if ( is_callable( [ $pageSet, 'getSpecialPages' ] ) ) {
-			// 1.37+, no fallback for earlier versions
-			// @phan-suppress-next-line PhanUndeclaredMethod
-			foreach ( $pageSet->getSpecialPages() as $id => $title ) {
-				$pageMap[$title->getNamespace()][$title->getDBkey()] = $id;
-				$pageTitles[] = $title;
-			}
+		foreach ( $pageSet->getSpecialPages() as $id => $title ) {
+			$pageMap[$title->getNamespace()][$title->getDBkey()] = $id;
+			$pageTitles[] = $title;
 		}
 
 		if ( count( $pageMap ) > 1 ) {

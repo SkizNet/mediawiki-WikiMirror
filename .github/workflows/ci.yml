@@ -20,8 +20,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        php: [ '7.4' ]
-        mediawiki: [ REL1_35, REL1_36, REL1_37, master ]
+        php: [ '7.4', '8.1' ]
+        mediawiki: [ REL1_39, master ]
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -63,8 +63,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        php: [ '7.4' ]
-        mediawiki: [ REL1_35, REL1_36, REL1_37, master ]
+        php: [ '7.4', '8.1' ]
+        mediawiki: [ REL1_39, master ]
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2

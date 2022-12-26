@@ -7,6 +7,7 @@ use ErrorPageError;
 use Exception;
 use Html;
 use ManualLogEntry;
+use MediaWiki\Session\CsrfTokenSet;
 use MWException;
 use OOUI;
 use ReadOnlyError;
@@ -87,15 +88,7 @@ class SpecialMirror extends UnlistedSpecialPage {
 
 		$this->comment = $request->getText( 'wpComment' );
 
-		if ( is_callable( [ $this->getContext(), 'getCsrfTokenSet' ] ) ) {
-			// 1.37+
-			// @phan-suppress-next-line PhanUndeclaredMethod
-			$editTokenValid = $this->getContext()->getCsrfTokenSet()->matchTokenField();
-		} else {
-			// 1.35-1.36
-			$editTokenValid = $user->matchEditToken( $request->getVal( 'wpEditToken' ) );
-		}
-
+		$editTokenValid = $this->getContext()->getCsrfTokenSet()->matchTokenField();
 		if ( $request->wasPosted() && $request->getVal( 'action' ) === 'submit' && $editTokenValid ) {
 			$this->doMirror();
 			$out->addWikiMsg( 'wikimirror-mirror-success', $this->title->getPrefixedText() );
@@ -179,18 +172,8 @@ class SpecialMirror extends UnlistedSpecialPage {
 		] );
 
 		$subpage = $this->title->getPrefixedText();
-		if ( is_callable( [ $this->getContext(), 'getCsrfTokenSet' ] ) ) {
-			// 1.37+
-			// keep the fully qualified class name here since a use statement would break in 1.35-1.36
-			// @phan-suppress-next-line PhanUndeclaredMethod
-			$editToken = $this->getContext()->getCsrfTokenSet()->getToken();
-			// @phan-suppress-next-line PhanUndeclaredClassConstant
-			$editTokenFieldName = \MediaWiki\Session\CsrfTokenSet::DEFAULT_FIELD_NAME;
-		} else {
-			// 1.35-1.36
-			$editToken = $this->getUser()->getEditToken();
-			$editTokenFieldName = 'wpEditToken';
-		}
+		$editToken = $this->getContext()->getCsrfTokenSet()->getToken();
+		$editTokenFieldName = CsrfTokenSet::DEFAULT_FIELD_NAME;
 
 		$form = new OOUI\FormLayout( [
 			'method' => 'post',

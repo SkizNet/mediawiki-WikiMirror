@@ -86,14 +86,7 @@ class ParseResponse {
 			$output->setIndicator( $name, $html );
 		}
 
-		if ( method_exists( $output, 'setHideNewSection' ) ) {
-			// 1.38+
-			// @phan-suppress-next-line PhanUndeclaredMethod
-			$output->setHideNewSection( true );
-		} else {
-			// 1.35-1.37
-			$output->hideNewSection( true );
-		}
+		$output->setHideNewSection( true );
 
 		if ( $this->pageInfo->lastRevisionId ) {
 			$output->setTimestamp( wfTimestamp( TS_MW, $this->pageInfo->lastRevision->timestamp ) );

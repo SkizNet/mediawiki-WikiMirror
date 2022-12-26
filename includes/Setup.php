@@ -10,11 +10,5 @@ class Setup {
 	 */
 	public static function callback() {
 		define( 'CONTENT_MODEL_MIRROR', 'mirror' );
-
-		// 1.35 compat
-		if ( !defined( 'DB_PRIMARY' ) ) {
-			// phpcs:disable MediaWiki.Usage.DeprecatedConstantUsage.DB_MASTER
-			define( 'DB_PRIMARY', DB_MASTER );
-		}
 	}
 }

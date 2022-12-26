@@ -5,7 +5,10 @@ namespace WikiMirror\Mirror;
 use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Interwiki\InterwikiLookup;
+use MediaWiki\Linker\LinkTarget;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Page\RedirectLookup;
+use MediaWiki\Page\WikiPageFactory;
 use MWException;
 use Status;
 use Title;
@@ -44,6 +47,9 @@ class Mirror {
 	/** @var WANObjectCache */
 	protected $cache;
 
+	/** @var RedirectLookup */
+	protected $redirectLookup;
+
 	/** @var ILoadBalancer */
 	protected $loadBalancer;
 
@@ -57,6 +63,7 @@ class Mirror {
 	 * @param HttpRequestFactory $httpRequestFactory
 	 * @param WANObjectCache $wanObjectCache
 	 * @param ILoadBalancer $loadBalancer
+	 * @param RedirectLookup $redirectLookup
 	 * @param ServiceOptions $options
 	 */
 	public function __construct(
@@ -64,6 +71,7 @@ class Mirror {
 		HttpRequestFactory $httpRequestFactory,
 		WANObjectCache $wanObjectCache,
 		ILoadBalancer $loadBalancer,
+		RedirectLookup $redirectLookup,
 		ServiceOptions $options
 	) {
 		$options->assertRequiredOptions( self::CONSTRUCTOR_OPTIONS );
@@ -71,6 +79,7 @@ class Mirror {
 		$this->httpRequestFactory = $httpRequestFactory;
 		$this->cache = $wanObjectCache;
 		$this->loadBalancer = $loadBalancer;
+		$this->redirectLookup = $redirectLookup;
 		$this->options = $options;
 		$this->titleCache = [];
 	}
@@ -327,8 +336,7 @@ class Mirror {
 	 * Convenience function to retrieve the redirect target of a potentially mirrored page.
 	 *
 	 * @param Title $title Title to retrieve redirect target for
-	 * @return Title|null Redirect target, or null if this Title is not a redirect.
-	 * @throws MWException On internal error
+	 * @return LinkTarget|null Redirect target, or null if this Title is not a redirect.
 	 */
 	public function getRedirectTarget( Title $title ) {
 		if ( !$this->canMirror( $title ) ) {
@@ -337,16 +345,7 @@ class Mirror {
 				return null;
 			}
 
-			if ( method_exists( '\MediaWiki\MediaWikiServices', 'getWikiPageFactory' ) ) {
-				// 1.36+
-				// @phan-suppress-next-line PhanUndeclaredMethod
-				$wikiPage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
-			} else {
-				// 1.35
-				$wikiPage = WikiPage::factory( $title );
-			}
-
-			return $wikiPage->getRedirectTarget();
+			return $this->redirectLookup->getRedirectTarget( $title );
 		}
 
 		$status = $this->getCachedPage( $title );

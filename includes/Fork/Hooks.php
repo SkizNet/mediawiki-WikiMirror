@@ -72,9 +72,6 @@ class Hooks implements
 		$importTitleFactory = ReflectionHelper::getPrivateProperty( $class, 'importTitleFactory', $reader );
 
 		if ( $foreignNamespaces === null ) {
-			// In 1.35, NaiveForeignTitleFactory constructor doesn't take args, however it's safe in PHP to pass
-			// too many arguments to a thing, so suppress phan for 1.35 instead of doing a version_compare
-			// @phan-suppress-next-line PhanParamTooMany
 			$foreignTitleFactory = new NaiveForeignTitleFactory( $this->contentLanguage );
 		} else {
 			$foreignTitleFactory = new NamespaceAwareForeignTitleFactory( $foreignNamespaces );

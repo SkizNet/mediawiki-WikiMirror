@@ -31,9 +31,6 @@ class RevisionLookupManipulator implements RevisionLookup {
 	 * @inheritDoc
 	 */
 	public function getRevisionById( $id, $flags = 0, $page = null ) {
-		// In 1.35, getRevisionById only takes 2 args, however it's safe in PHP to pass
-		// too many arguments to a thing, so suppress phan for 1.35 instead of doing a version_compare
-		// @phan-suppress-next-line PhanParamTooMany
 		return $this->revisionLookup->getRevisionById( $id, $flags, $page );
 	}
 

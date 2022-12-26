@@ -12,6 +12,7 @@ use Html;
 use ManualLogEntry;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\SlotRecord;
+use MediaWiki\Session\CsrfTokenSet;
 use MediaWiki\User\UserOptionsLookup;
 use MWException;
 use OldRevisionImporter;
@@ -122,15 +123,7 @@ class SpecialFork extends UnlistedSpecialPage {
 		$this->import = $request->getBool( 'wpImport', !$request->wasPosted() );
 		$this->comment = $request->getText( 'wpComment' );
 
-		if ( is_callable( [ $this->getContext(), 'getCsrfTokenSet' ] ) ) {
-			// 1.37+
-			// @phan-suppress-next-line PhanUndeclaredMethod
-			$editTokenValid = $this->getContext()->getCsrfTokenSet()->matchTokenField();
-		} else {
-			// 1.35-1.36
-			$editTokenValid = $user->matchEditToken( $request->getVal( 'wpEditToken' ) );
-		}
-
+		$editTokenValid = $this->getContext()->getCsrfTokenSet()->matchTokenField();
 		if ( $request->wasPosted() && $request->getVal( 'action' ) === 'submit' && $editTokenValid ) {
 			$this->doFork();
 			$messageArgs = [ wfEscapeWikiText( $this->title->getPrefixedText() ) ];
@@ -240,26 +233,8 @@ class SpecialFork extends UnlistedSpecialPage {
 			// clear Title cache first since we now have a page id
 			Title::clearCaches();
 			$newTitle = Title::newFromDBkey( $this->title->getDBkey() );
-
-			if ( is_callable( [ MediaWikiServices::getInstance(), 'getWatchlistManager' ] ) ) {
-				// 1.36+
-				// @phan-suppress-next-line PhanUndeclaredMethod
-				$watchlistManager = MediaWikiServices::getInstance()->getWatchlistManager();
-			} else {
-				// 1.35
-				$watchlistManager = MediaWikiServices::getInstance()->getWatchlistNotificationManager();
-			}
-
-			if ( is_callable( [ $watchlistManager, 'addWatch' ] ) ) {
-				// 1.37+
-				// @phan-suppress-next-line PhanUndeclaredMethod
-				$watchlistManager->addWatch( $user, $newTitle );
-			} else {
-				// 1.35-1.36
-				/** @noinspection PhpUndefinedMethodInspection */
-				// @phan-suppress-next-line PhanUndeclaredMethod
-				$user->addWatch( $newTitle );
-			}
+			$watchlistManager = MediaWikiServices::getInstance()->getWatchlistManager();
+			$watchlistManager->addWatch( $user, $newTitle );
 		}
 
 		$dbw->endAtomic( __METHOD__ );
@@ -328,18 +303,8 @@ class SpecialFork extends UnlistedSpecialPage {
 		] );
 
 		$subpage = $this->title->getPrefixedText();
-		if ( is_callable( [ $this->getContext(), 'getCsrfTokenSet' ] ) ) {
-			// 1.37+
-			// keep the fully qualified class name here since a use statement would break in 1.35-1.36
-			// @phan-suppress-next-line PhanUndeclaredMethod
-			$editToken = $this->getContext()->getCsrfTokenSet()->getToken();
-			// @phan-suppress-next-line PhanUndeclaredClassConstant
-			$editTokenFieldName = \MediaWiki\Session\CsrfTokenSet::DEFAULT_FIELD_NAME;
-		} else {
-			// 1.35-1.36
-			$editToken = $this->getUser()->getEditToken();
-			$editTokenFieldName = 'wpEditToken';
-		}
+		$editToken = $this->getContext()->getCsrfTokenSet()->getToken();
+		$editTokenFieldName = CsrfTokenSet::DEFAULT_FIELD_NAME;
 
 		$form = new OOUI\FormLayout( [
 			'method' => 'post',
