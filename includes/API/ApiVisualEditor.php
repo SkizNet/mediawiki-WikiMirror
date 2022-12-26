@@ -21,6 +21,9 @@ use ReadOnlyMode;
 use Title;
 use WikiMirror\Mirror\Mirror;
 
+/**
+ * @phan-file-suppress PhanTypeMismatchArgument,PhanTypeMismatchArgumentReal
+ */
 class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor {
 	/** @var Mirror */
 	private $mirror;
@@ -69,7 +72,7 @@ class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor 
 		$this->mirror = $mirror;
 		// Signatures changed in non-compatible ways between 1.39 and 1.40
 		if ( version_compare( MW_VERSION, '1.40', '<' ) ) {
-			// @phan-suppress-next-line PhanTypeMismatchArgument,PhanTypeMismatchArgumentReal,PhanParamTooFew
+			// @phan-suppress-next-line PhanParamTooFew
 			parent::__construct(
 				$main,
 				$name,
@@ -87,7 +90,7 @@ class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor 
 				$userFactory
 			);
 		} else {
-			// @phan-suppress-next-line PhanTypeMismatchArgument,PhanTypeMismatchArgumentReal,PhanParamTooMany
+			// @phan-suppress-next-line PhanParamTooMany
 			parent::__construct(
 				$main,
 				$name,

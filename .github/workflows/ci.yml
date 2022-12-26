@@ -31,19 +31,19 @@ jobs:
           coverage: none
           tools: composer, phpcs, phplint
       - name: Setup MediaWiki
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: wikimedia/mediawiki
           ref: ${{ matrix.mediawiki }}
       - name: Setup VisualEditor
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: wikimedia/mediawiki-extensions-VisualEditor
           ref: ${{ matrix.mediawiki }}
           path: extensions/VisualEditor
           submodules: true
       - name: Setup Extension
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: extensions/${{ env.EXTNAME }}
       - name: Setup Composer
@@ -74,19 +74,19 @@ jobs:
           coverage: none
           tools: composer
       - name: Setup MediaWiki
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: wikimedia/mediawiki
           ref: ${{ matrix.mediawiki }}
       - name: Setup VisualEditor
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: wikimedia/mediawiki-extensions-VisualEditor
           ref: ${{ matrix.mediawiki }}
           path: extensions/VisualEditor
           submodules: true
       - name: Setup Extension
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: extensions/${{ env.EXTNAME }}
       - name: Setup Composer
@@ -95,4 +95,4 @@ jobs:
           composer update
           composer update
       - name: Phan
-        run: ./vendor/bin/phan -d extensions/${{ env.EXTNAME }} --minimum-target-php-version=7.3 --long-progress-bar
+        run: ./vendor/bin/phan -d extensions/${{ env.EXTNAME }} --minimum-target-php-version=7.4 --long-progress-bar
