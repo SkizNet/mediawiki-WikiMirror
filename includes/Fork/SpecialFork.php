@@ -208,7 +208,7 @@ class SpecialFork extends UnlistedSpecialPage {
 			$revision->setTimestamp( $revInfo->timestamp );
 			$revision->setComment( $revInfo->comment );
 			if ( $revInfo->remoteUserId === 0 ) {
-				$revision->setUserIP( $revInfo->user );
+				$revision->setUsername( $revInfo->user );
 			} else {
 				$revision->setUsername( $externalUserNames->applyPrefix( $revInfo->user ) );
 			}

@@ -32,25 +32,25 @@ class Mirror {
 	public const PC_VERSION = 3;
 
 	/** @var ServiceOptions */
-	protected $options;
+	protected ServiceOptions $options;
 
 	/** @var InterwikiLookup */
-	protected $interwikiLookup;
+	protected InterwikiLookup $interwikiLookup;
 
 	/** @var HttpRequestFactory */
-	protected $httpRequestFactory;
+	protected HttpRequestFactory $httpRequestFactory;
 
 	/** @var WANObjectCache */
-	protected $cache;
+	protected WANObjectCache $cache;
 
 	/** @var RedirectLookup */
-	protected $redirectLookup;
+	protected RedirectLookup $redirectLookup;
 
 	/** @var ILoadBalancer */
-	protected $loadBalancer;
+	protected ILoadBalancer $loadBalancer;
 
 	/** @var array */
-	private $titleCache;
+	private array $titleCache;
 
 	/**
 	 * Mirror constructor.
@@ -301,8 +301,6 @@ class Mirror {
 	 */
 	public function getVisualEditorApi( array $params ) {
 		$params['action'] = 'visualeditor';
-		$params['format'] = 'json';
-		$params['formatversion'] = 2;
 
 		$result = $this->getRemoteApiResponse( $params, __METHOD__ );
 		if ( $result !== false ) {
@@ -426,8 +424,6 @@ class Mirror {
 		$pageInfo = $status->getValue();
 
 		$params = [
-			'format' => 'json',
-			'formatversion' => 2,
 			'action' => 'parse',
 			'oldid' => $pageInfo->lastRevisionId,
 			'prop' => 'text|langlinks|categories|modules|jsconfigvars|indicators|wikitext|properties',
@@ -484,8 +480,6 @@ class Mirror {
 
 		// check if the remote page exists
 		$params = [
-			'format' => 'json',
-			'formatversion' => 2,
 			'action' => 'query',
 			'prop' => 'info|revisions',
 			'indexpageids' => 1,
@@ -525,8 +519,6 @@ class Mirror {
 		// check if this is a redirect, and if so fetch information about the redirect
 		if ( array_key_exists( 'redirect', $pageInfo ) && $pageInfo['redirect'] ) {
 			$params = [
-				'format' => 'json',
-				'formatversion' => 2,
 				'action' => 'query',
 				'prop' => 'info',
 				'titles' => $title->getPrefixedText(),
@@ -547,8 +539,6 @@ class Mirror {
 	 */
 	private function getLiveSiteInfo() {
 		$params = [
-			'format' => 'json',
-			'formatversion' => 2,
 			'action' => 'query',
 			'meta' => 'siteinfo',
 			'siprop' => 'general|namespaces|namespacealiases'
@@ -563,9 +553,8 @@ class Mirror {
 	 * @param array $params API params
 	 * @param string $caller Pass __METHOD__
 	 * @return false|array
-	 * @noinspection PhpSameParameterValueInspection
 	 */
-	private function getRemoteApiResponse( array $params, string $caller ) {
+	public function getRemoteApiResponse( array $params, string $caller ) {
 		$remoteWiki = $this->options->get( 'WikiMirrorRemote' );
 		if ( $remoteWiki === null ) {
 			// no remote wiki configured, so we can't mirror anything
@@ -579,6 +568,9 @@ class Mirror {
 			wfLogWarning( 'Invalid interwiki configuration for $wgWikiMirrorRemote.' );
 			return false;
 		}
+
+		$params['format'] = 'json';
+		$params['formatversion'] = 2;
 
 		$apiUrl = $interwiki->getAPI();
 		$action = $params['action'];
