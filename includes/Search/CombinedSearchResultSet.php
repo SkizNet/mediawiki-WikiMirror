@@ -125,7 +125,7 @@ class CombinedSearchResultSet implements ISearchResultSet {
 			}
 		}
 
-		return null;
+		return '';
 	}
 
 	/**

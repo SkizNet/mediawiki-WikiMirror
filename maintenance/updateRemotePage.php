@@ -132,9 +132,7 @@ namespace WikiMirror\Maintenance {
 		 */
 		private function fetchFromDump( string $path, array $replacements, string $out ) {
 			// these definitions don't do anything but exist to make phan happy
-			/** @noinspection PhpUnusedLocalVariableInspection */
 			$gfh = null;
-			/** @noinspection PhpUnusedLocalVariableInspection */
 			$tfh = null;
 
 			try {
@@ -175,8 +173,6 @@ namespace WikiMirror\Maintenance {
 }
 
 namespace {
-	/** @noinspection PhpUnusedLocalVariableInspection */
 	$maintClass = 'WikiMirror\Maintenance\UpdateRemotePage';
-	/** @noinspection PhpIncludeInspection */
 	require RUN_MAINTENANCE_IF_MAIN;
 }

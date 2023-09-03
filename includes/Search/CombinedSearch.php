@@ -43,7 +43,7 @@ class CombinedSearch extends SearchEngine {
 			if ( $r instanceof Status ) {
 				if ( !$r->isGood() ) {
 					// omit failed mirrored searches from results, but pass other failures to the end user
-					if ( $engine::class === 'WikiMirror\Search\MirrorSearch' ) {
+					if ( get_class( $engine ) === 'WikiMirror\Search\MirrorSearch' ) {
 						continue;
 					} else {
 						return $r;

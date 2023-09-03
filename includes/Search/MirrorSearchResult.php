@@ -23,6 +23,7 @@ class MirrorSearchResult extends RevisionSearchResult {
 
 	/**
 	 * @param array $apiResult
+	 * @param string $type 'text' or 'title'
 	 */
 	public function __construct( $apiResult, $type ) {
 		$title = Title::makeTitleSafe( $apiResult['ns'], strtr( $apiResult['title'], ' ', '_' ) );
