@@ -16,14 +16,17 @@ use IApiMessage;
 use MediaWiki\Api\Hook\ApiCheckCanExecuteHook;
 use MediaWiki\Api\Hook\APIGetAllowedParamsHook;
 use MediaWiki\Api\Hook\ApiMain__moduleManagerHook;
+use MediaWiki\Api\Hook\ApiMakeParserOptionsHook;
 use MediaWiki\Api\Hook\APIQueryAfterExecuteHook;
 use Message;
 use MWException;
+use ParserOptions;
 use Title;
 use User;
 use Wikimedia\ParamValidator\ParamValidator;
 use Wikimedia\Rdbms\IDatabase;
 use Wikimedia\Rdbms\ILoadBalancer;
+use Wikimedia\ScopedCallback;
 use WikiMirror\Compat\ReflectionHelper;
 use WikiMirror\Mirror\Mirror;
 
@@ -31,6 +34,7 @@ class Hooks implements
 	ApiCheckCanExecuteHook,
 	APIGetAllowedParamsHook,
 	ApiMain__moduleManagerHook,
+	ApiMakeParserOptionsHook,
 	APIQueryAfterExecuteHook
 {
 	/** @var ILoadBalancer */
@@ -106,6 +110,24 @@ class Hooks implements
 					"VisualEditor.ParsoidClientFactory"
 				]
 			] );
+		}
+	}
+
+	/**
+	 * Disable parser cache on API calls for mirrored pages
+	 *
+	 * @param ParserOptions $options
+	 * @param Title $title Title to be parsed
+	 * @param array $params Parameter array for the API module
+	 * @param ApiBase $module API module (which is also a ContextSource)
+	 * @param ScopedCallback|null &$reset Set to a ScopedCallback used to reset any hooks after
+	 *  the parse is done
+	 * @param bool &$suppressCache Set true if cache should be suppressed
+	 * @return void
+	 */
+	public function onApiMakeParserOptions( $options, $title, $params, $module, &$reset, &$suppressCache ) {
+		if ( !$this->mirror->isForked( $title ) ) {
+			$suppressCache = true;
 		}
 	}
 

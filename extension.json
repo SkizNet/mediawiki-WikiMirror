@@ -1,7 +1,7 @@
 {
 	"name": "WikiMirror",
 	"namemsg": "wikimirror-extensionname",
-	"version": "0.10.0",
+	"version": "0.11.0",
 	"author": [
 		"Ryan Schmidt"
 	],
@@ -36,6 +36,7 @@
 		"ApiCheckCanExecute": "api",
 		"APIGetAllowedParams": "api",
 		"ApiMain::moduleManager": "api",
+		"ApiMakeParserOptions": "api",
 		"APIQueryAfterExecute": "api",
 		"getUserPermissionsErrors": "mirror",
 		"getUserPermissionsErrorsExpensive": "mirror",
