@@ -37,8 +37,15 @@ class CombinedSearch extends SearchEngine implements PaginatingSearchEngine {
 	 */
 	private function doCombinedSearch( string $term, string $type ) {
 		$results = [];
+		$limit = $this->limit;
+		$offset = $this->offset;
 
 		foreach ( $this->engines as $engine ) {
+			if ( $limit <= 0 ) {
+				continue;
+			}
+
+			$engine->setLimitOffset( $limit, $offset );
 			$r = $engine->$type( $term );
 
 			if ( $r instanceof Status ) {
@@ -63,6 +70,8 @@ class CombinedSearch extends SearchEngine implements PaginatingSearchEngine {
 			Assert::postcondition( $r instanceof ISearchResultSet,
 				'SearchEngine backend did not return a value of the correct type' );
 			$results[] = $r;
+			$limit -= $r->numRows();
+			$offset = max( $offset - ( $r->getTotalHits() ?? $r->numRows() ), 0 );
 		}
 
 		// no results?
