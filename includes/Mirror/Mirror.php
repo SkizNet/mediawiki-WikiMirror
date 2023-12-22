@@ -552,9 +552,10 @@ class Mirror {
 	 *
 	 * @param array $params API params
 	 * @param string $caller Pass __METHOD__
+	 * @param bool $topLevel If false (default), the returned array only includes results instead of all metadata
 	 * @return false|array
 	 */
-	public function getRemoteApiResponse( array $params, string $caller ) {
+	public function getRemoteApiResponse( array $params, string $caller, bool $topLevel = false ) {
 		$remoteWiki = $this->options->get( 'WikiMirrorRemote' );
 		if ( $remoteWiki === null ) {
 			// no remote wiki configured, so we can't mirror anything
@@ -588,6 +589,6 @@ class Mirror {
 			return false;
 		}
 
-		return $data[$action];
+		return $topLevel ? $data : $data[$action];
 	}
 }

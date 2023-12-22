@@ -3,10 +3,11 @@
 namespace WikiMirror\Search;
 
 use MediaWiki\MediaWikiServices;
+use PaginatingSearchEngine;
 use SearchEngine;
 use WikiMirror\Mirror\Mirror;
 
-class MirrorSearch extends SearchEngine {
+class MirrorSearch extends SearchEngine implements PaginatingSearchEngine {
 	/** @var Mirror */
 	private Mirror $mirror;
 
@@ -30,12 +31,19 @@ class MirrorSearch extends SearchEngine {
 			'list' => 'search',
 			'srsearch' => $term,
 			'srnamespace' => implode( '|', $this->namespaces ),
-			'srlimit' => $this->maxResults,
+			'srlimit' => min( $this->limit, $this->maxResults ),
+			'sroffset' => $this->offset,
 			'srwhat' => $type,
 			'srprop' => 'size|wordcount|timestamp|snippet',
 		];
 
 		/* API response example:
+		"batchcomplete": true,
+		"continue": {
+			"sroffset": 50,
+			"continue": "-||"
+		},
+		"query": {
 			"searchinfo": {
 				"totalhits": 10472
 			},
@@ -51,20 +59,37 @@ class MirrorSearch extends SearchEngine {
 				},
 				...
 			]
+		}
 		*/
-		$resp = $this->mirror->getRemoteApiResponse( $params, __METHOD__ );
-
-		if ( $resp === false ) {
-			// search failed
-			return null;
-		}
-
 		$results = [];
-		foreach ( $resp['search'] as $result ) {
-			$results[] = new MirrorSearchResult( $result, $type );
-		}
 
-		return new MirrorSearchResultSet( $results );
+		do {
+			$resp = $this->mirror->getRemoteApiResponse( $params, __METHOD__, true );
+
+			if ( $resp === false ) {
+				// search failed
+				return null;
+			}
+
+			foreach ( $resp['query']['search'] as $result ) {
+				$results[] = new MirrorSearchResult( $result, $type );
+			}
+
+			// prep for next page, if there is one
+			// (if there isn't, break out of the loop so we don't go on forever)
+			if ( !isset( $resp['continue']['sroffset'] ) ) {
+				break;
+			}
+
+			foreach ( $resp['continue'] as $key => $value ) {
+				$params[$key] = $value;
+			}
+		} while ( count( $results ) < $this->limit );
+
+		// are there still more results?
+		$hasMoreResults = count( $results ) > $this->limit || isset( $resp['continue']['sroffset'] );
+
+		return new MirrorSearchResultSet( $results, $resp['query']['searchinfo']['totalhits'], $hasMoreResults );
 	}
 
 	/** @inheritDoc */

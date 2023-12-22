@@ -4,6 +4,7 @@ namespace WikiMirror\Search;
 
 use ISearchResultSet;
 use MediaWiki\MediaWikiServices;
+use PaginatingSearchEngine;
 use SearchEngine;
 use Status;
 use Wikimedia\Assert\Assert;
@@ -11,7 +12,7 @@ use Wikimedia\Assert\Assert;
 /**
  * A search engine which searches all engines listed in $wgSearchTypeAlternatives
  */
-class CombinedSearch extends SearchEngine {
+class CombinedSearch extends SearchEngine implements PaginatingSearchEngine {
 	/** @var SearchEngine[] */
 	private array $engines;
 
