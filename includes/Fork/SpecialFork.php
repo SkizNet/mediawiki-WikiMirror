@@ -7,7 +7,6 @@ use ContentHandler;
 use ErrorPageError;
 use Exception;
 use ExternalUserNames;
-use HashConfig;
 use Html;
 use ManualLogEntry;
 use MediaWiki\MediaWikiServices;

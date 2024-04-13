@@ -3,7 +3,6 @@
 namespace WikiMirror\Compat;
 
 use ReflectionClass;
-use ReflectionException;
 
 class ReflectionHelper {
 	/**

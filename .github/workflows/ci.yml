@@ -29,19 +29,19 @@ jobs:
           coverage: none
           tools: composer
       - name: Setup MediaWiki
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: wikimedia/mediawiki
           ref: ${{ matrix.mediawiki }}
       - name: Setup VisualEditor
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: wikimedia/mediawiki-extensions-VisualEditor
           ref: ${{ matrix.mediawiki }}
           path: extensions/VisualEditor
           submodules: true
       - name: Setup Extension
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: extensions/${{ env.EXTNAME }}
       - name: Setup Composer
@@ -72,19 +72,19 @@ jobs:
           coverage: none
           tools: composer
       - name: Setup MediaWiki
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: wikimedia/mediawiki
           ref: ${{ matrix.mediawiki }}
       - name: Setup VisualEditor
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: wikimedia/mediawiki-extensions-VisualEditor
           ref: ${{ matrix.mediawiki }}
           path: extensions/VisualEditor
           submodules: true
       - name: Setup Extension
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: extensions/${{ env.EXTNAME }}
       - name: Setup Composer
