@@ -6,24 +6,19 @@ use ApiMain;
 use ApiUsageException;
 use IBufferingStatsdDataFactory;
 use MediaWiki\Content\Transform\ContentTransformer;
-use MediaWiki\HookContainer\HookContainer;
-use MediaWiki\Linker\LinkRenderer;
+use MediaWiki\EditPage\IntroMessageBuilder;
+use MediaWiki\EditPage\PreloadedContentBuilder;
+use MediaWiki\Extension\VisualEditor\VisualEditorParsoidClientFactory;
 use MediaWiki\Page\WikiPageFactory;
-use MediaWiki\Permissions\RestrictionStore;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\SpecialPage\SpecialPageFactory;
+use MediaWiki\User\TempUser\TempUserCreator;
 use MediaWiki\User\UserFactory;
-use MediaWiki\User\UserNameUtils;
 use MediaWiki\User\UserOptionsLookup;
 use MediaWiki\Watchlist\WatchlistManager;
-use Parser;
-use ReadOnlyMode;
 use Title;
 use WikiMirror\Mirror\Mirror;
 
-/**
- * @phan-file-suppress PhanTypeMismatchArgument,PhanTypeMismatchArgumentReal
- */
 class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor {
 	/** @var Mirror */
 	private $mirror;
@@ -33,62 +28,51 @@ class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor 
 	 * @param string $name
 	 * @param Mirror $mirror
 	 * @param RevisionLookup $revisionLookup
-	 * @param UserNameUtils $userNameUtils
-	 * @param Parser $parser
-	 * @param LinkRenderer $linkRenderer
+	 * @param TempUserCreator $tempUserCreator
+	 * @param UserFactory $userFactory
 	 * @param UserOptionsLookup $userOptionsLookup
 	 * @param WatchlistManager $watchlistManager
 	 * @param ContentTransformer $contentTransformer
-	 * @param SpecialPageFactory $specialPageFactory
-	 * @param ReadOnlyMode $readOnlyMode
-	 * @param RestrictionStore $restrictionStore
 	 * @param IBufferingStatsdDataFactory $statsdDataFactory
 	 * @param WikiPageFactory $wikiPageFactory
-	 * @param HookContainer $hookContainer
-	 * @param UserFactory $userFactory
-	 * @param \MediaWiki\Extension\VisualEditor\VisualEditorParsoidClientFactory|null $visualEditorParsoidClientFactory
+	 * @param IntroMessageBuilder $introMessageBuilder
+	 * @param PreloadedContentBuilder $preloadedContentBuilder
+	 * @param SpecialPageFactory $specialPageFactory
+	 * @param VisualEditorParsoidClientFactory $parsoidClientFactory
 	 */
 	public function __construct(
 		ApiMain $main,
-		$name,
+		string $name,
 		Mirror $mirror,
 		RevisionLookup $revisionLookup,
-		UserNameUtils $userNameUtils,
-		Parser $parser,
-		LinkRenderer $linkRenderer,
+		TempUserCreator $tempUserCreator,
+		UserFactory $userFactory,
 		UserOptionsLookup $userOptionsLookup,
 		WatchlistManager $watchlistManager,
 		ContentTransformer $contentTransformer,
-		SpecialPageFactory $specialPageFactory,
-		ReadOnlyMode $readOnlyMode,
-		RestrictionStore $restrictionStore,
 		IBufferingStatsdDataFactory $statsdDataFactory,
 		WikiPageFactory $wikiPageFactory,
-		HookContainer $hookContainer,
-		UserFactory $userFactory,
-		// @phan-suppress-next-line PhanUndeclaredTypeParameter
-		$visualEditorParsoidClientFactory = null
+		IntroMessageBuilder $introMessageBuilder,
+		PreloadedContentBuilder $preloadedContentBuilder,
+		SpecialPageFactory $specialPageFactory,
+		VisualEditorParsoidClientFactory $parsoidClientFactory
 	) {
 		$this->mirror = $mirror;
-		// @phan-suppress-next-line PhanParamTooMany
 		parent::__construct(
 			$main,
 			$name,
 			$revisionLookup,
-			$userNameUtils,
-			$parser,
-			$linkRenderer,
+			$tempUserCreator,
+			$userFactory,
 			$userOptionsLookup,
 			$watchlistManager,
 			$contentTransformer,
-			$specialPageFactory,
-			$readOnlyMode,
-			$restrictionStore,
 			$statsdDataFactory,
 			$wikiPageFactory,
-			$hookContainer,
-			$userFactory,
-			$visualEditorParsoidClientFactory
+			$introMessageBuilder,
+			$preloadedContentBuilder,
+			$specialPageFactory,
+			$parsoidClientFactory
 		);
 	}
 

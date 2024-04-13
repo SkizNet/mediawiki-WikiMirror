@@ -92,23 +92,18 @@ class Hooks implements
 				'services' => [
 					"Mirror",
 					"RevisionLookup",
-					"UserNameUtils",
-					"Parser",
-					"LinkRenderer",
+					"TempUserCreator",
+					"UserFactory",
 					"UserOptionsLookup",
 					"WatchlistManager",
 					"ContentTransformer",
-					"SpecialPageFactory",
-					"ReadOnlyMode",
-					"RestrictionStore",
 					"StatsdDataFactory",
 					"WikiPageFactory",
-					"HookContainer",
-					"UserFactory"
+					"IntroMessageBuilder",
+					"PreloadedContentBuilder",
+					"SpecialPageFactory",
+					"VisualEditor.ParsoidClientFactory",
 				],
-				'optional_services' => [
-					"VisualEditor.ParsoidClientFactory"
-				]
 			] );
 		}
 	}
