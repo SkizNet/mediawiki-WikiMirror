@@ -27,7 +27,7 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mbstring, intl
           coverage: none
-          tools: composer, phpcs, phplint
+          tools: composer
       - name: Setup MediaWiki
         uses: actions/checkout@v3
         with:
@@ -50,9 +50,9 @@ jobs:
           composer update
           composer update
       - name: Lint
-        run: phplint -w extensions/${{ env.EXTNAME }}
+        run: ./vendor/bin/parallel-lint --exclude node_modules --exclude vendor extensions/${{ env.EXTNAME }}
       - name: PHP Code Sniffer
-        run: phpcs -sp --standard=vendor/mediawiki/mediawiki-codesniffer/MediaWiki extensions/${{ env.EXTNAME }}
+        run: ./vendor/bin/phpcs -sp --standard=vendor/mediawiki/mediawiki-codesniffer/MediaWiki extensions/${{ env.EXTNAME }}
 
   security:
     name: Static Analysis
