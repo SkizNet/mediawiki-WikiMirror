@@ -70,47 +70,26 @@ class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor 
 		$visualEditorParsoidClientFactory = null
 	) {
 		$this->mirror = $mirror;
-		// Signatures changed in non-compatible ways between 1.39 and 1.40
-		if ( version_compare( MW_VERSION, '1.40', '<' ) ) {
-			// @phan-suppress-next-line PhanParamTooFew
-			parent::__construct(
-				$main,
-				$name,
-				$userNameUtils,
-				$parser,
-				$linkRenderer,
-				$userOptionsLookup,
-				$watchlistManager,
-				$contentTransformer,
-				$specialPageFactory,
-				$readOnlyMode,
-				$restrictionStore,
-				$wikiPageFactory,
-				$hookContainer,
-				$userFactory
-			);
-		} else {
-			// @phan-suppress-next-line PhanParamTooMany
-			parent::__construct(
-				$main,
-				$name,
-				$revisionLookup,
-				$userNameUtils,
-				$parser,
-				$linkRenderer,
-				$userOptionsLookup,
-				$watchlistManager,
-				$contentTransformer,
-				$specialPageFactory,
-				$readOnlyMode,
-				$restrictionStore,
-				$statsdDataFactory,
-				$wikiPageFactory,
-				$hookContainer,
-				$userFactory,
-				$visualEditorParsoidClientFactory
-			);
-		}
+		// @phan-suppress-next-line PhanParamTooMany
+		parent::__construct(
+			$main,
+			$name,
+			$revisionLookup,
+			$userNameUtils,
+			$parser,
+			$linkRenderer,
+			$userOptionsLookup,
+			$watchlistManager,
+			$contentTransformer,
+			$specialPageFactory,
+			$readOnlyMode,
+			$restrictionStore,
+			$statsdDataFactory,
+			$wikiPageFactory,
+			$hookContainer,
+			$userFactory,
+			$visualEditorParsoidClientFactory
+		);
 	}
 
 	/**

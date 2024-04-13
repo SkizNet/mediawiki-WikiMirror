@@ -54,7 +54,7 @@ class RevisionLookupManipulator implements RevisionLookup {
 	public function getRevisionByTimestamp(
 		$page,
 		string $timestamp,
-		int $flags = RevisionLookup::READ_NORMAL
+		int $flags = IDBAccessObject::READ_NORMAL
 	): ?RevisionRecord {
 		return $this->revisionLookup->getRevisionByTimestamp( $page, $timestamp, $flags );
 	}

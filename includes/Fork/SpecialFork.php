@@ -199,10 +199,7 @@ class SpecialFork extends UnlistedSpecialPage {
 				$config->get( 'WikiMirrorAssignKnownUsers' )
 			);
 
-			// WikiRevision constructor takes a param in 1.39, but not in 1.40+
-			// It is safe to pass too many arguments to a constructor in PHP, so simply suppress the issue for 1.40+
-			// @phan-suppress-next-line PhanParamTooMany
-			$revision = new WikiRevision( new HashConfig() );
+			$revision = new WikiRevision();
 			$revision->setTitle( $this->title );
 			$revision->setContent( SlotRecord::MAIN, $content );
 			$revision->setTimestamp( $revInfo->timestamp );

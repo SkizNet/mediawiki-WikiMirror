@@ -2,6 +2,7 @@
 
 namespace WikiMirror\Mirror;
 
+use IDBAccessObject;
 use MediaWiki\MediaWikiServices;
 use MWException;
 use WikiMirror\API\PageInfoResponse;
@@ -16,7 +17,7 @@ class WikiRemotePage extends WikiPage {
 		$from = self::convertSelectType( $from );
 		if ( !is_int( $from ) ) {
 			// passed a row object
-			$this->loadFromRow( $from, self::READ_NORMAL );
+			$this->loadFromRow( $from, IDBAccessObject::READ_NORMAL );
 			return;
 		}
 
@@ -53,7 +54,7 @@ class WikiRemotePage extends WikiPage {
 			];
 		}
 
-		$this->loadFromRow( $row, self::READ_LATEST );
+		$this->loadFromRow( $row, IDBAccessObject::READ_LATEST );
 	}
 
 	/**
