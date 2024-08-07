@@ -4,7 +4,6 @@ namespace WikiMirror\API;
 
 use MediaWiki\Languages\LanguageFactory;
 use MediaWiki\Parser\Parsoid\PageBundleParserOutputConverter;
-use MediaWiki\Parser\Parsoid\ParsoidRenderID;
 use ParserOutput;
 use Title;
 use Wikimedia\UUID\GlobalIdGenerator;
@@ -131,7 +130,14 @@ class ParseResponse {
 		$revId = $this->pageInfo->lastRevisionId;
 		$uniqueId = $this->globalIdGenerator->newUUIDv1();
 		$output->setLanguage( $this->languageFactory->getLanguage( $this->pageInfo->pageLanguage ) );
-		$output->setExtensionData( ParserOutput::PARSOID_RENDER_ID_KEY, "{$revId}/{$uniqueId}" );
+
+		// 1.41 compat
+		$output->setExtensionData( 'parsoid-render-id', "{$revId}/{$uniqueId}" );
+		// 1.42+
+		if ( method_exists( $output, 'setRenderId' ) ) {
+			$output->setRenderId( "{$revId}/{$uniqueId}" );
+		}
+
 		$output->setExtensionData(
 			PageBundleParserOutputConverter::PARSOID_PAGE_BUNDLE_KEY,
 			[
@@ -161,7 +167,7 @@ class ParseResponse {
 		// we support remote $wgMainPageIsDomainRoot but do not support remote $wgActionPaths or $wgVariantArticlePath
 		// (local versions of the above are all supported as we go through Title to generate the new URL)
 		$remotePathInfo = wfParseUrl( $siteInfo->server . $siteInfo->articlePath );
-		$inPath = isset( $remotePathInfo['path'] ) && strpos( $remotePathInfo['path'], '$1' ) !== false;
+		$inPath = isset( $remotePathInfo['path'] ) && str_contains( $remotePathInfo['path'], '$1' );
 		$queryKey = null;
 		if ( !$inPath && isset( $remotePathInfo['query'] ) ) {
 			$remotePathInfo['query'] = wfCgiToArray( $remotePathInfo['query'] );

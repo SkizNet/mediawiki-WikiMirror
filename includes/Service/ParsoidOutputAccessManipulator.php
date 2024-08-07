@@ -11,7 +11,6 @@ use WikiMirror\Mirror\MirrorPageRecord;
 
 class ParsoidOutputAccessManipulator extends ParsoidOutputAccess {
 	public function __construct( ParsoidOutputAccess $original ) {
-		// do crimes with Reflection since our parent is unstable
 		// not calling parent::__construct is very intentional here,
 		// the following code makes us a clone of $original instead
 		$reflection = new ReflectionClass( parent::class );
