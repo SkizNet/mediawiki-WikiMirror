@@ -24,7 +24,11 @@ class Hooks	implements MediaWikiServicesHook {
 	public function onMediaWikiServices( $services ) {
 		$services->addServiceManipulator( 'PageStoreFactory',
 			static function ( PageStoreFactory $factory, ServiceContainer $container ) {
-				return new PageStoreFactoryManipulator( $factory, $container->getService( 'Mirror' ) );
+				return new PageStoreFactoryManipulator(
+					$factory,
+					// pass Mirror as lazily-loaded to avoid service dependency loops
+					static fn() => $container->getService( 'Mirror' )
+				);
 			} );
 
 		$services->addServiceManipulator( 'ParsoidOutputAccess',
@@ -36,8 +40,7 @@ class Hooks	implements MediaWikiServicesHook {
 			static function ( RevisionLookup $lookup, ServiceContainer $container ) {
 				return new RevisionLookupManipulator(
 					$lookup,
-					// pass Mirror as lazily-loaded to avoid service dependency loops
-					static fn() => $container->getService( 'Mirror' )
+					$container->getService( 'Mirror' )
 				);
 			} );
 	}
