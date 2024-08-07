@@ -25,7 +25,22 @@ class PageRestHelperFactoryManipulator extends PageRestHelperFactory {
 		$revision = null,
 		bool $lenientRevHandling = false
 	): HtmlOutputRendererHelper {
-		$helper = parent::newHtmlOutputRendererHelper( $page, $parameters, $authority, $revision, $lenientRevHandling );
+		// in 1.41 and 1.42 this only takes one arg: $lenientRevHandling,
+		// however that'd be passed to us as $page
+		if ( version_compare( MW_VERSION, '1.43', '<' ) ) {
+			// @phan-suppress-next-line PhanParamTooFew
+			$helper = parent::newHtmlOutputRendererHelper( $page );
+		} else {
+			// @phan-suppress-next-line PhanParamTooMany
+			$helper = parent::newHtmlOutputRendererHelper(
+				$page,
+				$parameters,
+				$authority,
+				$revision,
+				$lenientRevHandling
+			);
+		}
+
 		return new HtmlOutputRendererHelperManipulator( $helper );
 	}
 }

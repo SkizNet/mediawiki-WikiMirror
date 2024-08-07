@@ -23,6 +23,7 @@ class PageStoreFactoryManipulator extends PageStoreFactory {
 		}
 	}
 
+	/** @inheritDoc */
 	public function getPageStore( $wikiId = WikiAwareEntity::LOCAL ): PageStore {
 		$store = parent::getPageStore( $wikiId );
 		return new PageStoreManipulator( $store, $this->mirror );

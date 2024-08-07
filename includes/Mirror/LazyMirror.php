@@ -20,7 +20,7 @@ class LazyMirror {
 
 	public function getMirror(): Mirror {
 		if ( $this->mirror === null ) {
-			$this->mirror = ($this->mirrorFactory)();
+			$this->mirror = ( $this->mirrorFactory )();
 			Assert::postcondition(
 				$this->mirror instanceof Mirror,
 				'Mirror factory did not return a Mirror instance.'

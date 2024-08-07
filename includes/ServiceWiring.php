@@ -7,7 +7,7 @@ use WikiMirror\Mirror\Mirror;
 
 return [
 	'LazyMirror' => static function ( MediaWikiServices $services ): LazyMirror {
-		return new LazyMirror( static fn() => $services->getService( 'Mirror' ) );
+		return new LazyMirror( static fn () => $services->getService( 'Mirror' ) );
 	},
 	'Mirror' => static function ( MediaWikiServices $services ): Mirror {
 		return new Mirror(

@@ -135,6 +135,7 @@ class ParseResponse {
 
 		if ( method_exists( $output, 'setRenderId' ) ) {
 			// 1.42+
+			// @phan-suppress-next-line PhanUndeclaredMethod
 			$output->setRenderId( "{$revId}/{$uniqueId}" );
 		} else {
 			// 1.41 compat
