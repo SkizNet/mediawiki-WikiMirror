@@ -16,7 +16,6 @@ use MediaWiki\Permissions\Hook\GetUserPermissionsErrorsExpensiveHook;
 use MediaWiki\Permissions\Hook\GetUserPermissionsErrorsHook;
 use MediaWiki\Permissions\PermissionManager;
 use MessageSpecifier;
-use MWException;
 use RequestContext;
 use SkinTemplate;
 use SpecialPage;
@@ -126,7 +125,7 @@ class Hooks implements
 			&& strpos( $userAgent, '+http' ) !== false
 			&& strpos( $userAgent, 'bot' ) !== false;
 
-		if ( !$isBot && $this->mirror->canMirror( $title ) ) {
+		if ( !$isBot && $this->mirror->canMirror( $title, true ) ) {
 			$page = new WikiRemotePage( $title );
 			return false;
 		}
@@ -141,14 +140,13 @@ class Hooks implements
 	 * @param array &$links Structured navigation links. This is used to alter the navigation for
 	 *   skins which use buildNavigationUrls such as Vector.
 	 * @return void This hook must not abort, it must return no value
-	 * @throws MWException
 	 */
 	public function onSkinTemplateNavigation__Universal( $sktemplate, &$links ): void {
 		$title = $sktemplate->getRelevantTitle();
 		$user = $sktemplate->getUser();
 		$skinName = $sktemplate->getSkinName();
 
-		if ( $this->mirror->canMirror( $title ) ) {
+		if ( $this->mirror->canMirror( $title, true ) ) {
 			if ( $this->permManager->quickUserCan( 'fork', $user, $title ) ) {
 				$forkTitle = SpecialPage::getTitleFor( 'Fork', $title->getPrefixedDBkey() );
 				$links['views']['fork'] = [

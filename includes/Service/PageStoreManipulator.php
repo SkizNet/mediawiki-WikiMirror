@@ -4,26 +4,25 @@ namespace WikiMirror\Service;
 
 use IDBAccessObject;
 use MediaWiki\Page\ExistingPageRecord;
-use MediaWiki\Page\PageReference;
 use MediaWiki\Page\PageStore;
 use MediaWiki\Title\Title;
 use ReflectionClass;
 use RuntimeException;
 use WikiMirror\API\PageInfoResponse;
-use WikiMirror\Mirror\Mirror;
+use WikiMirror\Mirror\LazyMirror;
 use WikiMirror\Mirror\MirrorPageRecord;
 
 class PageStoreManipulator extends PageStore {
-	/** @var Mirror */
-	private Mirror $mirror;
+	/** @var LazyMirror */
+	private LazyMirror $mirror;
 
 	/**
 	 * PageStoreManipulator constructor.
 	 *
 	 * @param PageStore $original
-	 * @param Mirror $mirror
+	 * @param LazyMirror $mirror
 	 */
-	public function __construct( PageStore $original, Mirror $mirror ) {
+	public function __construct( PageStore $original, LazyMirror $mirror ) {
 		$this->mirror = $mirror;
 
 		// not calling parent::__construct is very intentional here,
@@ -42,25 +41,14 @@ class PageStoreManipulator extends PageStore {
 		string $dbKey,
 		int $queryFlags = IDBAccessObject::READ_NORMAL
 	): ?ExistingPageRecord {
+		$mirror = $this->mirror->getMirror();
 		$title = Title::makeTitleSafe( $namespace, $dbKey );
 		if ( $title === null ) {
 			return null;
 		}
 
-		return $this->getPageByReference( $title, $queryFlags );
-	}
-
-	/**
-	 * @inheritDoc
-	 */
-	public function getPageByReference(
-		PageReference $page,
-		int $queryFlags = IDBAccessObject::READ_NORMAL
-	): ?ExistingPageRecord {
-		// should refactor this so the Mirror service takes on the new PageWhatever interfaces instead of Title
-		$title = Title::newFromPageReference( $page );
-		if ( $this->mirror->canMirror( $title, true ) ) {
-			$status = $this->mirror->getCachedPage( $title );
+		if ( $mirror->canMirror( $title, true ) ) {
+			$status = $mirror->getCachedPage( $title );
 			if ( !$status->isOK() ) {
 				throw new RuntimeException( (string)$status );
 			}
@@ -71,6 +59,6 @@ class PageStoreManipulator extends PageStore {
 			return new MirrorPageRecord( $pageInfo );
 		}
 
-		return parent::getPageByReference( $page, $queryFlags );
+		return parent::getPageByName( $namespace, $dbKey, $queryFlags );
 	}
 }

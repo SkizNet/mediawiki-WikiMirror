@@ -130,12 +130,15 @@ class ParseResponse {
 		$revId = $this->pageInfo->lastRevisionId;
 		$uniqueId = $this->globalIdGenerator->newUUIDv1();
 		$output->setLanguage( $this->languageFactory->getLanguage( $this->pageInfo->pageLanguage ) );
+		$output->setCacheRevisionId( $revId );
+		$output->setCacheTime( $this->pageInfo->touched );
 
-		// 1.41 compat
-		$output->setExtensionData( 'parsoid-render-id', "{$revId}/{$uniqueId}" );
-		// 1.42+
 		if ( method_exists( $output, 'setRenderId' ) ) {
+			// 1.42+
 			$output->setRenderId( "{$revId}/{$uniqueId}" );
+		} else {
+			// 1.41 compat
+			$output->setExtensionData( 'parsoid-render-id', "{$revId}/{$uniqueId}" );
 		}
 
 		$output->setExtensionData(

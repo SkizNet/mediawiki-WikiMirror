@@ -6,13 +6,13 @@ use MediaWiki\DAO\WikiAwareEntity;
 use MediaWiki\Page\PageStore;
 use MediaWiki\Page\PageStoreFactory;
 use ReflectionClass;
-use WikiMirror\Mirror\Mirror;
+use WikiMirror\Mirror\LazyMirror;
 
 class PageStoreFactoryManipulator extends PageStoreFactory {
-	/** @var Mirror|callable Lazy-loaded Mirror service */
-	private $mirror;
+	/** @var LazyMirror Lazy-loaded Mirror service */
+	private LazyMirror $mirror;
 
-	public function __construct( PageStoreFactory $original, callable $lazyMirror ) {
+	public function __construct( PageStoreFactory $original, LazyMirror $lazyMirror ) {
 		$this->mirror = $lazyMirror;
 
 		// not calling parent::__construct is very intentional here,
@@ -24,10 +24,6 @@ class PageStoreFactoryManipulator extends PageStoreFactory {
 	}
 
 	public function getPageStore( $wikiId = WikiAwareEntity::LOCAL ): PageStore {
-		if ( !( $this->mirror instanceof Mirror ) ) {
-			$this->mirror = ($this->mirror)();
-		}
-
 		$store = parent::getPageStore( $wikiId );
 		return new PageStoreManipulator( $store, $this->mirror );
 	}

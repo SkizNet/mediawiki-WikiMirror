@@ -8,7 +8,7 @@ namespace WikiMirror\Service;
 use MediaWiki\Hook\MediaWikiServicesHook;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\PageStoreFactory;
-use MediaWiki\Parser\Parsoid\ParsoidOutputAccess;
+use MediaWiki\Rest\Handler\Helper\PageRestHelperFactory;
 use MediaWiki\Revision\RevisionLookup;
 use Wikimedia\Services\ServiceContainer;
 
@@ -26,21 +26,20 @@ class Hooks	implements MediaWikiServicesHook {
 			static function ( PageStoreFactory $factory, ServiceContainer $container ) {
 				return new PageStoreFactoryManipulator(
 					$factory,
-					// pass Mirror as lazily-loaded to avoid service dependency loops
-					static fn() => $container->getService( 'Mirror' )
+					$container->getService( 'LazyMirror' )
 				);
 			} );
 
-		$services->addServiceManipulator( 'ParsoidOutputAccess',
-			static function ( ParsoidOutputAccess $outputAccess, ServiceContainer $container ) {
-				return new ParsoidOutputAccessManipulator( $outputAccess );
+		$services->addServiceManipulator( 'PageRestHelperFactory',
+			static function ( PageRestHelperFactory $factory, ServiceContainer $container ) {
+				return new PageRestHelperFactoryManipulator( $factory );
 			} );
 
 		$services->addServiceManipulator( 'RevisionLookup',
 			static function ( RevisionLookup $lookup, ServiceContainer $container ) {
 				return new RevisionLookupManipulator(
 					$lookup,
-					$container->getService( 'Mirror' )
+					$container->getService( 'LazyMirror' )
 				);
 			} );
 	}

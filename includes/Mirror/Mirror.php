@@ -274,12 +274,18 @@ class Mirror {
 			}
 		}
 
+		// Force recursive calls to exit early (e.g. from Title::exists) with a false value
+		// so that fallbacks to core MW logic are run instead in such situations.
+		// Would be better if we could refactor to not need recursion at all, but that's more complicated
+		// while we're still using Titles here.
+		$this->titleCache[$cacheKey] = 'recursion_guard';
+
 		if ( !$this->isLegalTitleForMirroring( $title ) ) {
 			$this->titleCache[$cacheKey] = 'illegal_title';
 			return false;
 		}
 
-		if ( $title->exists() && $title->getLatestRevID() ) {
+		if ( $title->exists() ) {
 			// page exists locally
 			$this->titleCache[$cacheKey] = 'forked';
 			return false;

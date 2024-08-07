@@ -8,23 +8,23 @@ use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
 use RuntimeException;
 use Title;
-use WikiMirror\Mirror\Mirror;
+use WikiMirror\Mirror\LazyMirror;
 use WikiMirror\Mirror\RemoteRevisionRecord;
 
 class RevisionLookupManipulator implements RevisionLookup {
 	/** @var RevisionLookup */
 	private RevisionLookup $revisionLookup;
 
-	/** @var Mirror */
-	private Mirror $mirror;
+	/** @var LazyMirror */
+	private LazyMirror $mirror;
 
 	/**
 	 * RevisionLookupManipulator constructor.
 	 *
 	 * @param RevisionLookup $revisionLookup
-	 * @param Mirror $mirror
+	 * @param LazyMirror $mirror
 	 */
-	public function __construct( RevisionLookup $revisionLookup, Mirror $mirror ) {
+	public function __construct( RevisionLookup $revisionLookup, LazyMirror $mirror ) {
 		$this->revisionLookup = $revisionLookup;
 		$this->mirror = $mirror;
 	}
@@ -41,8 +41,9 @@ class RevisionLookupManipulator implements RevisionLookup {
 	 */
 	public function getRevisionByTitle( $page, $revId = 0, $flags = 0 ) {
 		$title = Title::newFromPageIdentity( $page );
-		if ( !$revId && $this->mirror->canMirror( $title, true ) ) {
-			$status = $this->mirror->getCachedPage( $title );
+		$mirror = $this->mirror->getMirror();
+		if ( !$revId && $mirror->canMirror( $title, true ) ) {
+			$status = $mirror->getCachedPage( $title );
 			if ( !$status->isOK() ) {
 				throw new RuntimeException( (string)$status );
 			}
@@ -97,9 +98,10 @@ class RevisionLookupManipulator implements RevisionLookup {
 	 */
 	public function getKnownCurrentRevision( PageIdentity $page, $revId = 0 ) {
 		$title = Title::newFromPageIdentity( $page );
+		$mirror = $this->mirror->getMirror();
 
-		if ( !$revId && $this->mirror->canMirror( $title ) ) {
-			$status = $this->mirror->getCachedPage( $title );
+		if ( !$revId && $mirror->canMirror( $title, true ) ) {
+			$status = $mirror->getCachedPage( $title );
 			if ( !$status->isOK() ) {
 				throw new RuntimeException( (string)$status );
 			}
