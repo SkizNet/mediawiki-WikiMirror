@@ -1,6 +1,7 @@
 <?php
 
 namespace WikiMirror\Service;
+
 use MediaWiki\Page\PageIdentity;
 use MediaWiki\Parser\Parsoid\ParsoidOutputAccess;
 use MediaWiki\Status\Status;

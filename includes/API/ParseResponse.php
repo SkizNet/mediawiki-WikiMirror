@@ -130,8 +130,8 @@ class ParseResponse {
 
 		$revId = $this->pageInfo->lastRevisionId;
 		$uniqueId = $this->globalIdGenerator->newUUIDv1();
-		$output->setParsoidRenderId( ParsoidRenderID::newFromKey( "{$revId}/{$uniqueId}" ) );
 		$output->setLanguage( $this->languageFactory->getLanguage( $this->pageInfo->pageLanguage ) );
+		$output->setExtensionData( ParserOutput::PARSOID_RENDER_ID_KEY, "{$revId}/{$uniqueId}" );
 		$output->setExtensionData(
 			PageBundleParserOutputConverter::PARSOID_PAGE_BUNDLE_KEY,
 			[

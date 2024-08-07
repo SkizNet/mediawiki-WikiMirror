@@ -5,7 +5,7 @@ namespace WikiMirror\Mirror;
 use MediaWiki\Content\Renderer\ContentParseParams;
 use MediaWiki\Page\ExistingPageRecord;
 use MediaWiki\Page\PageIdentityValue;
-use MediaWiki\Parser\ParserOutput;
+use ParserOutput;
 use WikiMirror\API\PageInfoResponse;
 
 class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
