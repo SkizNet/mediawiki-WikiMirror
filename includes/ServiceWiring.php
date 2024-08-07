@@ -12,6 +12,8 @@ return [
 			$services->getMainWANObjectCache(),
 			$services->getDBLoadBalancer(),
 			$services->getRedirectLookup(),
+			$services->getGlobalIdGenerator(),
+			$services->getLanguageFactory(),
 			new ServiceOptions(
 				Mirror::CONSTRUCTOR_OPTIONS,
 				$services->getMainConfig()

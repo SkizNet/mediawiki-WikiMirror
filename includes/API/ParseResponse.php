@@ -2,39 +2,62 @@
 
 namespace WikiMirror\API;
 
+use MediaWiki\Languages\LanguageFactory;
+use MediaWiki\Parser\Parsoid\PageBundleParserOutputConverter;
+use MediaWiki\Parser\Parsoid\ParsoidRenderID;
 use ParserOutput;
 use Title;
+use Wikimedia\UUID\GlobalIdGenerator;
 use WikiMirror\Mirror\Mirror;
 
 class ParseResponse {
 	/** @var string */
-	public $title;
+	public string $title;
+
 	/** @var int */
-	public $pageId;
+	public int $pageId;
+
 	/** @var string */
-	public $html;
+	public string $html;
+
 	/** @var array */
-	public $languageLinks;
+	public array $languageLinks;
+
 	/** @var array */
-	public $categoryLinks;
+	public array $categoryLinks;
+
 	/** @var string[] */
-	public $modules;
+	public array $modules;
+
 	/** @var string[] */
-	public $moduleScripts;
+	public array $moduleScripts;
+
 	/** @var string[] */
-	public $moduleStyles;
+	public array $moduleStyles;
+
 	/** @var array */
-	public $jsConfigVars;
+	public array $jsConfigVars;
+
 	/** @var array */
-	public $indicators;
+	public array $indicators;
+
 	/** @var string */
-	public $wikitext;
+	public string $wikitext;
+
 	/** @var array */
-	public $properties;
+	public array $properties;
+
 	/** @var PageInfoResponse */
-	private $pageInfo;
+	private PageInfoResponse $pageInfo;
+
 	/** @var Mirror */
-	private $mirror;
+	private Mirror $mirror;
+
+	/** @var GlobalIdGenerator */
+	private GlobalIdGenerator $globalIdGenerator;
+
+	/** @var LanguageFactory */
+	private LanguageFactory $languageFactory;
 
 	/**
 	 * ParseResponse constructor.
@@ -42,9 +65,20 @@ class ParseResponse {
 	 * @param Mirror $mirror Mirror service that generated $response
 	 * @param array $response Associative array of API response
 	 * @param PageInfoResponse $pageInfo Page info corresponding to parsed text
+	 * @param GlobalIdGenerator $globalIdGenerator Global ID generator service
+	 * @param LanguageFactory $languageFactory Language factory service
 	 */
-	public function __construct( Mirror $mirror, array $response, PageInfoResponse $pageInfo ) {
+	public function __construct(
+		Mirror $mirror,
+		array $response,
+		PageInfoResponse $pageInfo,
+		GlobalIdGenerator $globalIdGenerator,
+		LanguageFactory $languageFactory
+	) {
 		$this->mirror = $mirror;
+		$this->globalIdGenerator = $globalIdGenerator;
+		$this->languageFactory = $languageFactory;
+
 		$this->pageInfo = $pageInfo;
 		$this->title = $response['title'];
 		$this->pageId = $response['pageid'];
@@ -93,6 +127,17 @@ class ParseResponse {
 		} else {
 			$output->setTimestamp( wfTimestamp( TS_MW ) );
 		}
+
+		$revId = $this->pageInfo->lastRevisionId;
+		$uniqueId = $this->globalIdGenerator->newUUIDv1();
+		$output->setParsoidRenderId( ParsoidRenderID::newFromKey( "{$revId}/{$uniqueId}" ) );
+		$output->setLanguage( $this->languageFactory->getLanguage( $this->pageInfo->pageLanguage ) );
+		$output->setExtensionData(
+			PageBundleParserOutputConverter::PARSOID_PAGE_BUNDLE_KEY,
+			[
+				'headers' => [ 'content-language' => $this->pageInfo->pageLanguage ],
+			]
+		);
 
 		return $output;
 	}

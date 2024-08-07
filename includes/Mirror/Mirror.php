@@ -5,12 +5,14 @@ namespace WikiMirror\Mirror;
 use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Interwiki\InterwikiLookup;
+use MediaWiki\Languages\LanguageFactory;
 use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Page\RedirectLookup;
 use Status;
 use Title;
 use WANObjectCache;
 use Wikimedia\Rdbms\ILoadBalancer;
+use Wikimedia\UUID\GlobalIdGenerator;
 use WikiMirror\API\PageInfoResponse;
 use WikiMirror\API\ParseResponse;
 use WikiMirror\API\SiteInfoResponse;
@@ -49,6 +51,12 @@ class Mirror {
 	/** @var ILoadBalancer */
 	protected ILoadBalancer $loadBalancer;
 
+	/** @var GlobalIdGenerator */
+	protected GlobalIdGenerator $globalIdGenerator;
+
+	/** @var LanguageFactory */
+	protected LanguageFactory $languageFactory;
+
 	/** @var array */
 	private array $titleCache;
 
@@ -60,6 +68,8 @@ class Mirror {
 	 * @param WANObjectCache $wanObjectCache
 	 * @param ILoadBalancer $loadBalancer
 	 * @param RedirectLookup $redirectLookup
+	 * @param GlobalIdGenerator $globalIdGenerator
+	 * @param LanguageFactory $languageFactory
 	 * @param ServiceOptions $options
 	 */
 	public function __construct(
@@ -68,6 +78,8 @@ class Mirror {
 		WANObjectCache $wanObjectCache,
 		ILoadBalancer $loadBalancer,
 		RedirectLookup $redirectLookup,
+		GlobalIdGenerator $globalIdGenerator,
+		LanguageFactory $languageFactory,
 		ServiceOptions $options
 	) {
 		$options->assertRequiredOptions( self::CONSTRUCTOR_OPTIONS );
@@ -76,6 +88,9 @@ class Mirror {
 		$this->cache = $wanObjectCache;
 		$this->loadBalancer = $loadBalancer;
 		$this->redirectLookup = $redirectLookup;
+		$this->globalIdGenerator = $globalIdGenerator;
+		$this->languageFactory = $languageFactory;
+
 		$this->options = $options;
 		$this->titleCache = [];
 	}
@@ -91,6 +106,18 @@ class Mirror {
 		$interwiki = $this->interwikiLookup->fetch( $remoteWiki );
 
 		return $interwiki->getURL( $title );
+	}
+
+	/**
+	 * Retrieve wiki id of the remote wiki for internal use.
+	 *
+	 * @return string
+	 */
+	public function getWikiId() {
+		$remoteWiki = $this->options->get( 'WikiMirrorRemote' );
+		$interwiki = $this->interwikiLookup->fetch( $remoteWiki );
+
+		return $interwiki->getWikiID();
 	}
 
 	/**
@@ -162,7 +189,13 @@ class Mirror {
 			return Status::newFatal( 'wikimirror-no-mirror', $title->getPrefixedText() );
 		}
 
-		return Status::newGood( new ParseResponse( $this, $value, $pageInfo->getValue() ) );
+		return Status::newGood( new ParseResponse(
+			$this,
+			$value,
+			$pageInfo->getValue(),
+			$this->globalIdGenerator,
+			$this->languageFactory
+		) );
 	}
 
 	/**
@@ -235,8 +268,10 @@ class Mirror {
 		$cacheKey = $title->getPrefixedDBkey();
 
 		if ( isset( $this->titleCache[$cacheKey] ) ) {
-			return $this->titleCache[$cacheKey] === 'valid'
-				|| $this->titleCache[$cacheKey] === 'fast_valid';
+			$cachedResult = $this->titleCache[$cacheKey];
+			if ( $fast || !str_starts_with( $cachedResult, 'fast_' ) ) {
+				return $cachedResult === 'valid' || $cachedResult === 'fast_valid';
+			}
 		}
 
 		if ( !$this->isLegalTitleForMirroring( $title ) ) {

@@ -3,18 +3,20 @@
 namespace WikiMirror\Service;
 
 use IDBAccessObject;
+use MediaWiki\Page\PageIdentity;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
+use RuntimeException;
 use Title;
 use WikiMirror\Mirror\Mirror;
 use WikiMirror\Mirror\RemoteRevisionRecord;
 
 class RevisionLookupManipulator implements RevisionLookup {
 	/** @var RevisionLookup */
-	private $revisionLookup;
+	private RevisionLookup $revisionLookup;
 
 	/** @var Mirror */
-	private $mirror;
+	private Mirror $mirror;
 
 	/**
 	 * RevisionLookupManipulator constructor.
@@ -38,6 +40,16 @@ class RevisionLookupManipulator implements RevisionLookup {
 	 * @inheritDoc
 	 */
 	public function getRevisionByTitle( $page, $revId = 0, $flags = 0 ) {
+		$title = Title::newFromPageIdentity( $page );
+		if ( !$revId && $this->mirror->canMirror( $title, true ) ) {
+			$status = $this->mirror->getCachedPage( $title );
+			if ( !$status->isOK() ) {
+				throw new RuntimeException( (string)$status );
+			}
+
+			return new RemoteRevisionRecord( $status->getValue() );
+		}
+
 		return $this->revisionLookup->getRevisionByTitle( $page, $revId, $flags );
 	}
 
@@ -83,32 +95,16 @@ class RevisionLookupManipulator implements RevisionLookup {
 	/**
 	 * @inheritDoc
 	 */
-	public function getKnownCurrentRevision( $page, $revId = 0 ) {
-		if ( $page instanceof Title ) {
-			$title = $page;
-		} elseif (
-			interface_exists( '\MediaWiki\Page\PageIdentity' )
-			&& is_a( $page, '\MediaWiki\Page\PageIdentity' )
-		) {
-			// 1.36+; below suppression is for 1.35 compat
-			// @phan-suppress-next-line PhanUndeclaredClassMethod
-			$title = Title::newFromDBkey( $page->getDBkey() );
-		} else {
-			// should never happen
-			return false;
-		}
-
-		if ( $title === null ) {
-			// invalid title somehow, should never happen
-			// but check for it anyway to make phan happy
-			return false;
-		}
+	public function getKnownCurrentRevision( PageIdentity $page, $revId = 0 ) {
+		$title = Title::newFromPageIdentity( $page );
 
 		if ( !$revId && $this->mirror->canMirror( $title ) ) {
 			$status = $this->mirror->getCachedPage( $title );
-			if ( $status->isOK() ) {
-				return new RemoteRevisionRecord( $status->getValue() );
+			if ( !$status->isOK() ) {
+				throw new RuntimeException( (string)$status );
 			}
+
+			return new RemoteRevisionRecord( $status->getValue() );
 		}
 
 		return $this->revisionLookup->getKnownCurrentRevision( $page, $revId );

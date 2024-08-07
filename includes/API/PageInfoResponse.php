@@ -10,36 +10,53 @@ use WikiMirror\Mirror\Mirror;
  * Wrapper around MediaWiki's API action=query&prop=info response
  */
 class PageInfoResponse {
+	/** @var string */
+	public string $wikiId;
+
 	/** @var int */
-	public $pageId;
+	public int $pageId;
+
 	/** @var int */
-	public $namespace;
+	public int $namespace;
+
 	/** @var string */
-	public $title;
+	public string $title;
+
 	/** @var string */
-	public $contentModel;
+	public string $contentModel;
+
 	/** @var string */
-	public $pageLanguage;
+	public string $pageLanguage;
+
 	/** @var string */
-	public $pageLanguageHtmlCode;
+	public string $pageLanguageHtmlCode;
+
 	/** @var string */
-	public $pageLanguageDir;
+	public string $pageLanguageDir;
+
 	/** @var string ISO timestamp */
-	public $touched;
+	public string $touched;
+
 	/** @var int */
-	public $lastRevisionId;
+	public int $lastRevisionId;
+
 	/** @var int */
-	public $length;
+	public int $length;
+
 	/** @var Title|null */
-	public $redirect;
+	public ?Title $redirect;
+
 	/** @var string */
-	public $displayTitle;
+	public string $displayTitle;
+
 	/** @var RevisionInfoResponse|null */
-	public $lastRevision;
+	public ?RevisionInfoResponse $lastRevision;
+
 	/** @var Mirror */
-	private $mirror;
-	/** @var Title */
-	private $titleObj = null;
+	private Mirror $mirror;
+
+	/** @var Title|null */
+	private ?Title $titleObj = null;
 
 	/**
 	 * PageInfoResponse constructor.
@@ -50,6 +67,7 @@ class PageInfoResponse {
 	public function __construct( Mirror $mirror, array $response ) {
 		$this->mirror = $mirror;
 
+		$this->wikiId = $mirror->getWikiID();
 		$this->pageId = $response['pageid'];
 		$this->namespace = $response['ns'];
 		$this->title = $response['title'];

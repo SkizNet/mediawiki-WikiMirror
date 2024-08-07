@@ -1,7 +1,7 @@
 {
 	"name": "WikiMirror",
 	"namemsg": "wikimirror-extensionname",
-	"version": "0.12.0",
+	"version": "0.13.0",
 	"author": [
 		"Ryan Schmidt"
 	],
@@ -140,7 +140,10 @@
 	],
 	"callback": "WikiMirror\\Setup::callback",
 	"requires": {
-		"MediaWiki": ">= 1.41.0"
+		"MediaWiki": ">= 1.41.0",
+		"platform": {
+			"php": ">= 8.1"
+		}
 	},
 	"manifest_version": 2
 }

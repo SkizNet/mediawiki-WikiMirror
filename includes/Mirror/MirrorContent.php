@@ -2,7 +2,6 @@
 
 namespace WikiMirror\Mirror;
 
-use MWException;
 use TextContent;
 use WikiMirror\API\PageInfoResponse;
 
@@ -14,11 +13,9 @@ class MirrorContent extends TextContent {
 	 * MirrorContent constructor.
 	 *
 	 * @param PageInfoResponse $pageInfo Page information this content is for
-	 * @throws MWException
 	 */
 	public function __construct( PageInfoResponse $pageInfo ) {
 		$this->pageInfo = $pageInfo;
-
 		parent::__construct( $pageInfo->getText()->wikitext, CONTENT_MODEL_MIRROR );
 	}
 
