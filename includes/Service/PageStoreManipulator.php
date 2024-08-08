@@ -7,10 +7,7 @@ use MediaWiki\Page\ExistingPageRecord;
 use MediaWiki\Page\PageStore;
 use MediaWiki\Title\Title;
 use ReflectionClass;
-use RuntimeException;
-use WikiMirror\API\PageInfoResponse;
 use WikiMirror\Mirror\LazyMirror;
-use WikiMirror\Mirror\MirrorPageRecord;
 
 class PageStoreManipulator extends PageStore {
 	/** @var LazyMirror */
@@ -48,15 +45,7 @@ class PageStoreManipulator extends PageStore {
 		}
 
 		if ( $mirror->canMirror( $title, true ) ) {
-			$status = $mirror->getCachedPage( $title );
-			if ( !$status->isOK() ) {
-				throw new RuntimeException( (string)$status );
-			}
-
-			/** @var PageInfoResponse $pageInfo */
-			$pageInfo = $status->getValue();
-
-			return new MirrorPageRecord( $pageInfo );
+			return $mirror->getMirrorPageRecord( $namespace, $dbKey );
 		}
 
 		return parent::getPageByName( $namespace, $dbKey, $queryFlags );

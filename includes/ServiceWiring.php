@@ -18,6 +18,7 @@ return [
 			$services->getRedirectLookup(),
 			$services->getGlobalIdGenerator(),
 			$services->getLanguageFactory(),
+			$services->getTitleFormatter(),
 			new ServiceOptions(
 				Mirror::CONSTRUCTOR_OPTIONS,
 				$services->getMainConfig()

@@ -7,7 +7,9 @@ use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Interwiki\InterwikiLookup;
 use MediaWiki\Languages\LanguageFactory;
 use MediaWiki\Linker\LinkTarget;
+use MediaWiki\Page\PageIdentity;
 use MediaWiki\Page\RedirectLookup;
+use MediaWiki\Title\TitleFormatter;
 use Status;
 use Title;
 use WANObjectCache;
@@ -57,8 +59,15 @@ class Mirror {
 	/** @var LanguageFactory */
 	protected LanguageFactory $languageFactory;
 
-	/** @var array */
+	protected TitleFormatter $titleFormatter;
+
+	/** @var array<string, string> */
 	private array $titleCache;
+
+	/**
+	 * @var array<string, ?MirrorPageRecord>
+	 */
+	private array $pageRecordCache;
 
 	/**
 	 * Mirror constructor.
@@ -70,6 +79,7 @@ class Mirror {
 	 * @param RedirectLookup $redirectLookup
 	 * @param GlobalIdGenerator $globalIdGenerator
 	 * @param LanguageFactory $languageFactory
+	 * @param TitleFormatter $titleFormatter
 	 * @param ServiceOptions $options
 	 */
 	public function __construct(
@@ -80,6 +90,7 @@ class Mirror {
 		RedirectLookup $redirectLookup,
 		GlobalIdGenerator $globalIdGenerator,
 		LanguageFactory $languageFactory,
+		TitleFormatter $titleFormatter,
 		ServiceOptions $options
 	) {
 		$options->assertRequiredOptions( self::CONSTRUCTOR_OPTIONS );
@@ -90,6 +101,7 @@ class Mirror {
 		$this->redirectLookup = $redirectLookup;
 		$this->globalIdGenerator = $globalIdGenerator;
 		$this->languageFactory = $languageFactory;
+		$this->titleFormatter = $titleFormatter;
 
 		$this->options = $options;
 		$this->titleCache = [];
@@ -125,23 +137,23 @@ class Mirror {
 	 * The data is cached for $wgTranscludeCacheExpiry time, although stale data
 	 * may be returned if we are unable to contact the remote wiki.
 	 *
-	 * @param Title $title Title to fetch
+	 * @param PageIdentity $page Page to fetch
 	 * @return Status On success, page data from remote API as a PageInfoResponse
 	 */
-	public function getCachedPage( Title $title ) {
-		if ( !$title->isValid() ) {
-			return Status::newFatal( 'wikimirror-no-mirror', $title->getPrefixedText() );
+	public function getCachedPage( PageIdentity $page ) {
+		$pageName = $this->titleFormatter->getPrefixedText( $page );
+		if ( !$page->canExist() ) {
+			return Status::newFatal( 'wikimirror-no-mirror', $pageName );
 		}
 
-		$id = hash( 'sha256', $title->getPrefixedText() );
-		$pageName = $title->getPrefixedText();
+		$id = hash( 'sha256', $pageName );
 		wfDebugLog( 'WikiMirror', "Retrieving cached info for {$pageName}." );
 		$value = $this->cache->getWithSetCallback(
 			$this->cache->makeKey( 'mirror', 'remote-info', self::PC_VERSION, $id ),
 			$this->options->get( 'TranscludeCacheExpiry' ),
-			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $title, $pageName ) {
+			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $page, $pageName ) {
 				wfDebugLog( 'WikiMirror', "{$pageName}: Info not found in cache." );
-				return $this->getLivePage( $title );
+				return $this->getLivePage( $page );
 			},
 			[
 				'pcTTL' => $this->cache::TTL_PROC_LONG,
@@ -151,7 +163,7 @@ class Mirror {
 		);
 
 		if ( !$value ) {
-			return Status::newFatal( 'wikimirror-no-mirror', $title->getPrefixedText() );
+			return Status::newFatal( 'wikimirror-no-mirror', $pageName );
 		}
 
 		return Status::newGood( new PageInfoResponse( $this, $value ) );
@@ -162,19 +174,19 @@ class Mirror {
 	 * The data is cached for $wgTranscludeCacheExpiry time, although stale data
 	 * may be returned if we are unable to contact the remote wiki.
 	 *
-	 * @param Title $title Title to fetch
+	 * @param PageIdentity $page Title to fetch
 	 * @return Status On success, page text from remote API as a ParseResponse
 	 */
-	public function getCachedText( Title $title ) {
-		$id = hash( 'sha256', $title->getPrefixedText() );
-		$pageName = $title->getPrefixedText();
+	public function getCachedText( PageIdentity $page ) {
+		$pageName = $this->titleFormatter->getPrefixedText( $page );
+		$id = hash( 'sha256', $pageName );
 		wfDebugLog( 'WikiMirror', "Retrieving cached text for {$pageName}." );
 		$value = $this->cache->getWithSetCallback(
 			$this->cache->makeKey( 'mirror', 'remote-text', self::PC_VERSION, $id ),
 			$this->options->get( 'TranscludeCacheExpiry' ),
-			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $title, $pageName ) {
+			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $page, $pageName ) {
 				wfDebugLog( 'WikiMirror', "{$pageName}: Text not found in cache." );
-				return $this->getLiveText( $title );
+				return $this->getLiveText( $page );
 			},
 			[
 				'pcTTL' => $this->cache::TTL_PROC_LONG,
@@ -183,10 +195,10 @@ class Mirror {
 			]
 		);
 
-		$pageInfo = $this->getCachedPage( $title );
+		$pageInfo = $this->getCachedPage( $page );
 
 		if ( !$value || !$pageInfo->isOK() ) {
-			return Status::newFatal( 'wikimirror-no-mirror', $title->getPrefixedText() );
+			return Status::newFatal( 'wikimirror-no-mirror', $pageName );
 		}
 
 		return Status::newGood( new ParseResponse(
@@ -230,10 +242,11 @@ class Mirror {
 	 * Determine whether this Title is completely ineligible for mirroring,
 	 * without checking if it exists anywhere.
 	 *
-	 * @param Title $title
+	 * @param PageIdentity $page
 	 * @return bool True if the Title is legal for mirroring, false otherwise
 	 */
-	private function isLegalTitleForMirroring( Title $title ) {
+	private function isLegalTitleForMirroring( PageIdentity $page ) {
+		$title = Title::newFromPageIdentity( $page );
 		$illegal = $title->isExternal()
 			|| $title->getNamespace() < 0
 			|| $title->getNamespace() === NS_MEDIAWIKI
@@ -260,14 +273,51 @@ class Mirror {
 	}
 
 	/**
+	 * Retrieve a PageRecord for a mirrored page. This will still return records for forked pages,
+	 * and must be paired with a call to canMirror() to determine whether the returned record
+	 * should be used.
+	 *
+	 * @param int $namespace Namespace ID
+	 * @param string $dbKey DB key, assumed to be valid
+	 * @return MirrorPageRecord|null The record, or null if the page does not exist remotely
+	 */
+	public function getMirrorPageRecord( int $namespace, string $dbKey ): ?MirrorPageRecord {
+		$cacheKey = "{$namespace}:{$dbKey}";
+		if ( array_key_exists( $cacheKey, $this->pageRecordCache ) ) {
+			return $this->pageRecordCache[$cacheKey];
+		}
+
+		$dbr = $this->loadBalancer->getConnection( DB_REPLICA );
+		$row = $dbr->newSelectQueryBuilder()
+			->select( '*' )
+			->from( 'remote_page' )
+			->leftJoin( 'remote_redirect', null, 'rp_id = rr_from' )
+			->where( [
+				'rp_namespace' => $namespace,
+				'rp_title' => $dbKey
+			] )
+			->caller( __METHOD__ )
+			->fetchRow();
+
+		if ( $row === false ) {
+			$this->pageRecordCache[$cacheKey] = null;
+			return null;
+		}
+
+		$record = new MirrorPageRecord( $row, $this );
+		$this->pageRecordCache[$cacheKey] = $record;
+		return $record;
+	}
+
+	/**
 	 * Determine whether or not the given title is eligible to be mirrored.
 	 *
-	 * @param Title $title
+	 * @param PageIdentity $page
 	 * @param bool $fast If true, skip expensive checks
 	 * @return bool True if the title can be mirrored, false if not.
 	 */
-	public function canMirror( Title $title, bool $fast = false ) {
-		$cacheKey = $title->getPrefixedDBkey();
+	public function canMirror( PageIdentity $page, bool $fast = false ) {
+		$cacheKey = $this->titleFormatter->getPrefixedText( $page );
 
 		if ( isset( $this->titleCache[$cacheKey] ) ) {
 			$cachedResult = $this->titleCache[$cacheKey];
@@ -282,12 +332,12 @@ class Mirror {
 		// while we're still using Titles here.
 		$this->titleCache[$cacheKey] = 'recursion_guard';
 
-		if ( !$this->isLegalTitleForMirroring( $title ) ) {
+		if ( !$this->isLegalTitleForMirroring( $page ) ) {
 			$this->titleCache[$cacheKey] = 'illegal_title';
 			return false;
 		}
 
-		if ( $title->exists() ) {
+		if ( $page->exists() ) {
 			// page exists locally
 			$this->titleCache[$cacheKey] = 'forked';
 			return false;
@@ -295,8 +345,8 @@ class Mirror {
 
 		$dbr = $this->loadBalancer->getConnection( DB_REPLICA );
 		$result = $dbr->selectField( 'forked_titles', 'COUNT(1)', [
-			'ft_namespace' => $title->getNamespace(),
-			'ft_title' => $title->getDBkey()
+			'ft_namespace' => $page->getNamespace(),
+			'ft_title' => $page->getDBkey()
 		], __METHOD__ );
 
 		if ( $result > 0 ) {
@@ -306,15 +356,11 @@ class Mirror {
 		}
 
 		if ( $fast ) {
-			$result = $dbr->selectField( 'remote_page', 'COUNT(1)', [
-				'rp_namespace' => $title->getNamespace(),
-				'rp_title' => $title->getDBkey()
-			], __METHOD__ );
-
-			$exists = $result > 0;
+			$result = $this->getMirrorPageRecord( $page->getNamespace(), $page->getDBkey() );
+			$exists = $result !== null;
 			$this->titleCache[$cacheKey] = $exists ? 'fast_valid' : 'fast_errored';
 			return $exists;
-		} elseif ( !$this->getCachedPage( $title )->isOK() ) {
+		} elseif ( !$this->getCachedPage( $page )->isOK() ) {
 			// not able to successfully fetch the mirrored page
 			$this->titleCache[$cacheKey] = 'errored';
 			return false;
@@ -451,14 +497,14 @@ class Mirror {
 	 * ]
 	 * @endcode
 	 *
-	 * @param Title $title Title to fetch
+	 * @param PageIdentity $page Title to fetch
 	 * @return array|bool|null False upon transient failure,
 	 * 		null if page can't be mirrored,
 	 * 		array of information from remote wiki on success
 	 * @see Mirror::getCachedText()
 	 */
-	private function getLiveText( Title $title ) {
-		$status = $this->getCachedPage( $title );
+	private function getLiveText( PageIdentity $page ) {
+		$status = $this->getCachedPage( $page );
 		if ( !$status->isOK() ) {
 			return null;
 		}
@@ -499,13 +545,13 @@ class Mirror {
 	 * ]
 	 * @endcode
 	 *
-	 * @param Title $title Title to fetch
+	 * @param PageIdentity $page
 	 * @return array|bool|null False upon transient failure,
 	 * 		null if page can't be mirrored,
 	 * 		array of information from remote wiki on success
 	 * @see Mirror::getCachedPage()
 	 */
-	private function getLivePage( Title $title ) {
+	private function getLivePage( PageIdentity $page ) {
 		// We say that the title can be mirrored if:
 		// 1. The title exists on the remote wiki
 		// 2. It is not a sensitive page (MediaWiki:*, user css/js/json pages)
@@ -513,11 +559,11 @@ class Mirror {
 		//    pages are handled via InstantCommons instead of this extension.
 		// If any of these checks fail, we do not cache any values
 
-		if ( !$this->isLegalTitleForMirroring( $title ) ) {
+		$pageName = $this->titleFormatter->getPrefixedText( $page );
+		if ( !$this->isLegalTitleForMirroring( $page ) ) {
 			// title refers to an interwiki page or a sensitive page
 			// cache a null value here so we don't need to continually carry out these checks
-			wfDebugLog( 'WikiMirror',
-				"{$title->getPrefixedText()} is an external or sensitive page; not mirroring." );
+			wfDebugLog( 'WikiMirror', "{$pageName} is an external or sensitive page; not mirroring." );
 			return null;
 		}
 
@@ -532,18 +578,18 @@ class Mirror {
 			'rvprop' => 'ids|timestamp|user|userid|size|slotsize|sha1|slotsha1|contentmodel'
 				. '|flags|comment|parsedcomment|content|tags|roles',
 			'rvslots' => '*',
-			'titles' => $title->getPrefixedText()
+			'titles' => $pageName
 		];
 
 		$data = $this->getRemoteApiResponse( $params, __METHOD__ );
 		if ( $data === false ) {
-			wfDebug( "{$title->getPrefixedText()} could not be fetched from remote mirror." );
+			wfDebug( "{$pageName} could not be fetched from remote mirror." );
 			return null;
 		}
 
 		if ( isset( $data['interwiki'] ) ) {
 			// cache the failure since there's no reason to query for an interwiki multiple times.
-			wfDebug( "{$title->getPrefixedText()} is an interwiki on remote mirror." );
+			wfDebug( "{$pageName} is an interwiki on remote mirror." );
 			return null;
 		}
 
@@ -551,7 +597,7 @@ class Mirror {
 			// == instead of === is intentional; right now the API returns a string for the page id
 			// but I'd rather not rely on that behavior. This lets the -1 be coerced to int if required.
 			// This indicates the page doesn't exist on the remote, so cache that failure result.
-			wfDebug( "{$title->getPrefixedText()} doesn't exist on remote mirror." );
+			wfDebug( "{$pageName} doesn't exist on remote mirror." );
 			return null;
 		}
 
@@ -564,7 +610,7 @@ class Mirror {
 			$params = [
 				'action' => 'query',
 				'prop' => 'info',
-				'titles' => $title->getPrefixedText(),
+				'titles' => $pageName,
 				'redirects' => true
 			];
 
