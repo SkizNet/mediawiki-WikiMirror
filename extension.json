@@ -38,6 +38,7 @@
 		"ApiMain::moduleManager": "api",
 		"ApiMakeParserOptions": "api",
 		"APIQueryAfterExecute": "api",
+		"BeforePageDisplay": "mirror",
 		"getUserPermissionsErrors": "mirror",
 		"getUserPermissionsErrorsExpensive": "mirror",
 		"HtmlPageLinkRendererEnd": "mirror",

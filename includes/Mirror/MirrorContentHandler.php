@@ -43,24 +43,12 @@ class MirrorContentHandler extends TextContentHandler {
 			return;
 		}
 
-		$pageInfo = $content->getMirrorPageInfo();
-
-		$mirrorIndicator = new ButtonWidget( [
-			'href' => $pageInfo->getUrl(),
-			'target' => '_blank',
-			'icon' => 'articles',
-			'framed' => false,
-			'title' => wfMessage( 'wikimirror-mirrored' )->plain()
-		] );
-
-		$modules = [ 'oojs-ui.styles.icons-content' ];
+		$modules = [];
 		if ( $content->getRedirectTarget() !== null ) {
 			$modules[] = 'mediawiki.action.view.redirectPage';
 		}
 
-		$output = $pageInfo->getText()->getParserOutput();
-		$output->setEnableOOUI( true );
+		$output = $content->getMirrorPageInfo()->getText()->getParserOutput();
 		$output->addModuleStyles( $modules );
-		$output->setIndicator( 'ext-wm-indicator-mirror', $mirrorIndicator );
 	}
 }

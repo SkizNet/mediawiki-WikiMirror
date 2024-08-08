@@ -6,17 +6,21 @@
 namespace WikiMirror\Mirror;
 
 use HtmlArmor;
+use MediaWiki\Hook\BeforePageDisplayHook;
 use MediaWiki\Hook\SkinTemplateNavigation__UniversalHook;
 use MediaWiki\Hook\TitleIsAlwaysKnownHook;
 use MediaWiki\Linker\Hook\HtmlPageLinkRendererEndHook;
 use MediaWiki\Linker\LinkRenderer;
 use MediaWiki\Linker\LinkTarget;
+use MediaWiki\Output\OutputPage;
 use MediaWiki\Page\Hook\WikiPageFactoryHook;
 use MediaWiki\Permissions\Hook\GetUserPermissionsErrorsExpensiveHook;
 use MediaWiki\Permissions\Hook\GetUserPermissionsErrorsHook;
 use MediaWiki\Permissions\PermissionManager;
 use MessageSpecifier;
+use OOUI\ButtonWidget;
 use RequestContext;
+use Skin;
 use SkinTemplate;
 use SpecialPage;
 use Title;
@@ -24,6 +28,7 @@ use User;
 use WikiPage;
 
 class Hooks implements
+	BeforePageDisplayHook,
 	GetUserPermissionsErrorsHook,
 	GetUserPermissionsErrorsExpensiveHook,
 	HtmlPageLinkRendererEndHook,
@@ -32,9 +37,10 @@ class Hooks implements
 	WikiPageFactoryHook
 {
 	/** @var Mirror */
-	private $mirror;
+	private Mirror $mirror;
+
 	/** @var PermissionManager */
-	private $permManager;
+	private PermissionManager $permManager;
 
 	/**
 	 * Hooks constructor.
@@ -45,6 +51,36 @@ class Hooks implements
 	public function __construct( Mirror $mirror, PermissionManager $permManager ) {
 		$this->mirror = $mirror;
 		$this->permManager = $permManager;
+	}
+
+	/**
+	 * Adds indicator to mirrored pages
+	 *
+	 * @param OutputPage $out
+	 * @param Skin $skin
+	 * @return void
+	 */
+	public function onBeforePageDisplay( $out, $skin ): void {
+		$title = $out->getTitle();
+		if ( !$this->mirror->canMirror( $title, true ) ) {
+			return;
+		}
+
+		// Status is guaranteed to be OK here since it would've thrown a lot earlier otherwise
+		$pageInfo = $this->mirror->getCachedPage( $title )->getValue();
+
+		$out->addModuleStyles( [ 'oojs-ui.styles.icons-content' ] );
+		$out->enableOOUI();
+
+		$mirrorIndicator = new ButtonWidget( [
+			'href' => $pageInfo->getUrl(),
+			'target' => '_blank',
+			'icon' => 'articles',
+			'framed' => false,
+			'title' => wfMessage( 'wikimirror-mirrored' )->plain()
+		] );
+
+		$out->setIndicators( [ 'ext-wm-indicator-mirror' => $mirrorIndicator ] );
 	}
 
 	/**
@@ -122,8 +158,8 @@ class Hooks implements
 		// This doesn't detect every bot in existence, but it does get most of the prominent ones
 		$userAgent = RequestContext::getMain()->getRequest()->getHeader( 'User-Agent' );
 		$isBot = $userAgent !== false
-			&& strpos( $userAgent, '+http' ) !== false
-			&& strpos( $userAgent, 'bot' ) !== false;
+			&& str_contains( $userAgent, '+http' )
+			&& str_contains( $userAgent, 'bot' );
 
 		if ( !$isBot && $this->mirror->canMirror( $title, true ) ) {
 			$page = new WikiRemotePage( $title );

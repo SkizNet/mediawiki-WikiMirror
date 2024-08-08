@@ -11,7 +11,7 @@ use WikiMirror\API\PageInfoResponse;
 
 class RemoteRevisionRecord extends RevisionRecord {
 	/** @var PageInfoResponse */
-	private $remoteData;
+	private PageInfoResponse $remoteData;
 
 	/**
 	 * RemoteRevisionRecord constructor.
@@ -27,8 +27,14 @@ class RemoteRevisionRecord extends RevisionRecord {
 		// but then MW might expect that the db specified here is accessible, so I'm not sure
 		// there's really any winning play short of writing a layer that mocks the Database API
 		// and translates that to foreign API requests, which is a lot of work for probably not much benefit
-		$dbDomain = false;
-		parent::__construct( $title, new RevisionSlots( $slots ), $dbDomain );
+		parent::__construct( $title, new RevisionSlots( $slots ), self::LOCAL );
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function getPageId( $wikiId = self::LOCAL ) {
+		return $this->remoteData->pageId;
 	}
 
 	/**
