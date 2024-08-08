@@ -61,26 +61,22 @@ class Hooks implements
 	 * @return void
 	 */
 	public function onBeforePageDisplay( $out, $skin ): void {
-		$title = $out->getTitle();
-		if ( !$this->mirror->canMirror( $title ) ) {
-			return;
+		$indicators = $out->getIndicators();
+
+		if ( isset( $indicators['ext-wm-indicator-mirror'] ) ) {
+			$out->addModuleStyles( [ 'oojs-ui.styles.icons-content' ] );
+			$out->enableOOUI();
+
+			$mirrorIndicator = new ButtonWidget( [
+				'href' => $indicators['ext-wm-indicator-mirror'],
+				'target' => '_blank',
+				'icon' => 'articles',
+				'framed' => false,
+				'title' => wfMessage( 'wikimirror-mirrored' )->plain()
+			] );
+
+			$out->setIndicators( [ 'ext-wm-indicator-mirror' => $mirrorIndicator ] );
 		}
-
-		// Status is guaranteed to be OK here since we're doing a slow check in canMirror above
-		$pageInfo = $this->mirror->getCachedPage( $title )->getValue();
-
-		$out->addModuleStyles( [ 'oojs-ui.styles.icons-content' ] );
-		$out->enableOOUI();
-
-		$mirrorIndicator = new ButtonWidget( [
-			'href' => $pageInfo->getUrl(),
-			'target' => '_blank',
-			'icon' => 'articles',
-			'framed' => false,
-			'title' => wfMessage( 'wikimirror-mirrored' )->plain()
-		] );
-
-		$out->setIndicators( [ 'ext-wm-indicator-mirror' => $mirrorIndicator ] );
 	}
 
 	/**

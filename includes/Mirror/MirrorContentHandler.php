@@ -47,7 +47,11 @@ class MirrorContentHandler extends TextContentHandler {
 			$modules[] = 'mediawiki.action.view.redirectPage';
 		}
 
-		$output = $content->getMirrorPageInfo()->getText()->getParserOutput();
+		$pageInfo = $content->getMirrorPageInfo();
+		$output = $pageInfo->getText()->getParserOutput();
 		$output->addModuleStyles( $modules );
+		// We can't directly add the OOUI ButtonWidget here due to a core bug (phab task pending)
+		// So set a placeholder and add indicator via BeforePageDisplay
+		$output->setIndicator( 'ext-wm-indicator-mirror', $pageInfo->getUrl() );
 	}
 }
