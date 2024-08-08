@@ -238,6 +238,8 @@ class Mirror {
 			|| $title->getNamespace() < 0
 			|| $title->getNamespace() === NS_MEDIAWIKI
 			|| $title->getNamespace() === NS_FILE
+			|| $title->getNamespace() === NS_PROJECT
+			|| $title->getNamespace() === NS_PROJECT_TALK
 			|| $title->isUserConfigPage();
 
 		return !$illegal;
