@@ -62,11 +62,11 @@ class Hooks implements
 	 */
 	public function onBeforePageDisplay( $out, $skin ): void {
 		$title = $out->getTitle();
-		if ( !$this->mirror->canMirror( $title, true ) ) {
+		if ( !$this->mirror->canMirror( $title ) ) {
 			return;
 		}
 
-		// Status is guaranteed to be OK here since it would've thrown a lot earlier otherwise
+		// Status is guaranteed to be OK here since we're doing a slow check in canMirror above
 		$pageInfo = $this->mirror->getCachedPage( $title )->getValue();
 
 		$out->addModuleStyles( [ 'oojs-ui.styles.icons-content' ] );
