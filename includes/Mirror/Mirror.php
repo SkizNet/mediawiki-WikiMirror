@@ -371,12 +371,12 @@ class Mirror {
 	/**
 	 * Mark that a Title is about to be imported, preventing it from being mirrored.
 	 *
-	 * @param Title $title
+	 * @param PageIdentity $page
 	 * @return void
 	 */
-	public function markForImport( Title $title ) {
-		$cacheKey = $title->getPrefixedDBkey();
-		$this->titleCache[$cacheKey] = false;
+	public function markForImport( PageIdentity $page ) {
+		$cacheKey = $this->titleFormatter->getPrefixedText( $page );
+		$this->titleCache[$cacheKey] = 'forked';
 	}
 
 	/**
