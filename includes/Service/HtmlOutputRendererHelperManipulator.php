@@ -2,9 +2,13 @@
 
 namespace WikiMirror\Service;
 
+use MediaWiki\Page\PageIdentity;
+use MediaWiki\Permissions\Authority;
 use MediaWiki\Rest\Handler\Helper\HtmlOutputRendererHelper;
 use ReflectionClass;
+use ReflectionProperty;
 use Wikimedia\Assert\Assert;
+use Wikimedia\Bcp47Code\Bcp47Code;
 use WikiMirror\Mirror\MirrorPageRecord;
 
 class HtmlOutputRendererHelperManipulator extends HtmlOutputRendererHelper {
@@ -33,6 +37,32 @@ class HtmlOutputRendererHelperManipulator extends HtmlOutputRendererHelper {
 
 		$page = $pageProperty->getValue( $this );
 		if ( $page instanceof MirrorPageRecord ) {
+			$parserOutputProperty->setValue( $this, $page->getParserOutput() );
+		}
+	}
+
+	/**
+	 * 1.41/1.42 compatibility shim
+	 *
+	 * @param PageIdentity $page
+	 * @param array $parameters
+	 * @param Authority $authority
+	 * @param $revision
+	 * @param Bcp47Code|null $pageLanguage
+	 * @return void
+	 */
+	public function init(
+		PageIdentity $page,
+		array $parameters,
+		Authority $authority,
+		$revision = null,
+		?Bcp47Code $pageLanguage = null
+	) {
+		// @phan-suppress-next-line PhanParamTooMany
+		parent::init( $page, $parameters, $authority, $revision, $pageLanguage );
+
+		if ( $page instanceof MirrorPageRecord ) {
+			$parserOutputProperty = new ReflectionProperty( parent::class, 'parserOutput' );
 			$parserOutputProperty->setValue( $this, $page->getParserOutput() );
 		}
 	}
