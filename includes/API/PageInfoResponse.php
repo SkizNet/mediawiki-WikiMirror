@@ -86,7 +86,7 @@ class PageInfoResponse {
 			$this->lastRevision = null;
 		}
 
-		if ( array_key_exists( 'redirect', $response ) ) {
+		if ( array_key_exists( 'redirect', $response ) && is_array( $response['redirect'] ) ) {
 			// convert to db key form
 			$title = str_replace( ' ', '_', $response['redirect']['title'] );
 			// strip namespace prefix if any
