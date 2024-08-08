@@ -4,7 +4,6 @@ namespace WikiMirror\Mirror;
 
 use Content;
 use MediaWiki\Content\Renderer\ContentParseParams;
-use OOUI\ButtonWidget;
 use ParserOutput;
 use TextContentHandler;
 
