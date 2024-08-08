@@ -59,7 +59,7 @@ class HtmlOutputRendererHelperManipulator extends HtmlOutputRendererHelper {
 		$revision = null,
 		?Bcp47Code $pageLanguage = null
 	) {
-		// @phan-suppress-next-line PhanParamTooMany PhanTypeMismatchArgumentSuperType
+		// @phan-suppress-next-line PhanParamTooMany, PhanTypeMismatchArgumentSuperType
 		parent::init( $page, $parameters, $authority, $revision, $pageLanguage );
 
 		if ( $page instanceof MirrorPageRecord ) {
