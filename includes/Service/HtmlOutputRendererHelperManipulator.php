@@ -5,6 +5,7 @@ namespace WikiMirror\Service;
 use MediaWiki\Page\PageIdentity;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Rest\Handler\Helper\HtmlOutputRendererHelper;
+use MediaWiki\Revision\RevisionRecord;
 use ReflectionClass;
 use ReflectionProperty;
 use Wikimedia\Assert\Assert;
@@ -47,7 +48,7 @@ class HtmlOutputRendererHelperManipulator extends HtmlOutputRendererHelper {
 	 * @param PageIdentity $page
 	 * @param array $parameters
 	 * @param Authority $authority
-	 * @param $revision
+	 * @param RevisionRecord|int|null $revision
 	 * @param Bcp47Code|null $pageLanguage
 	 * @return void
 	 */
@@ -58,7 +59,7 @@ class HtmlOutputRendererHelperManipulator extends HtmlOutputRendererHelper {
 		$revision = null,
 		?Bcp47Code $pageLanguage = null
 	) {
-		// @phan-suppress-next-line PhanParamTooMany
+		// @phan-suppress-next-line PhanParamTooMany PhanTypeMismatchArgumentSuperType
 		parent::init( $page, $parameters, $authority, $revision, $pageLanguage );
 
 		if ( $page instanceof MirrorPageRecord ) {
