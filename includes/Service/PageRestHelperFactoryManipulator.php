@@ -29,7 +29,7 @@ class PageRestHelperFactoryManipulator extends PageRestHelperFactory {
 		// however that'd be passed to us as $page
 		if ( version_compare( MW_VERSION, '1.43', '<' ) ) {
 			// @phan-suppress-next-line PhanParamTooFew
-			$helper = parent::newHtmlOutputRendererHelper( $page );
+			$helper = parent::newHtmlOutputRendererHelper( (bool)$page );
 		} else {
 			// @phan-suppress-next-line PhanParamTooMany
 			$helper = parent::newHtmlOutputRendererHelper(
