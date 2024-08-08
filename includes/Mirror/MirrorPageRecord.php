@@ -40,7 +40,7 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 			Assert::parameter( isset( $row->$field ), '$row->' . $field, 'is required' );
 		}
 
-		Assert::parameter( $row->page_id > 0, '$pageId', 'must be greater than zero (page must exist)' );
+		Assert::parameter( $row->rp_id > 0, '$pageId', 'must be greater than zero (page must exist)' );
 
 		// lie about the wiki id for now since a lot of core doesn't support non-local pages
 		parent::__construct( $row->rp_id, $row->rp_namespace, $row->rp_title, self::LOCAL );
