@@ -261,14 +261,14 @@ class Mirror {
 	/**
 	 * Determine whether the given title is currently forked.
 	 *
-	 * @param Title $title
+	 * @param PageIdentity $page
 	 * @return bool
 	 */
-	public function isForked( Title $title ) {
+	public function isForked( PageIdentity $page ) {
 		// prime the title cache
-		$this->canMirror( $title, true );
+		$this->canMirror( $page, true );
 
-		$cacheKey = $title->getPrefixedDBkey();
+		$cacheKey = $this->titleFormatter->getPrefixedText( $page );
 		return $this->titleCache[$cacheKey] === 'forked';
 	}
 
