@@ -62,12 +62,12 @@ class Mirror {
 	protected TitleFormatter $titleFormatter;
 
 	/** @var array<string, string> */
-	private array $titleCache;
+	private array $titleCache = [];
 
 	/**
 	 * @var array<string, ?MirrorPageRecord>
 	 */
-	private array $pageRecordCache;
+	private array $pageRecordCache = [];
 
 	/**
 	 * Mirror constructor.
@@ -102,9 +102,7 @@ class Mirror {
 		$this->globalIdGenerator = $globalIdGenerator;
 		$this->languageFactory = $languageFactory;
 		$this->titleFormatter = $titleFormatter;
-
 		$this->options = $options;
-		$this->titleCache = [];
 	}
 
 	/**
