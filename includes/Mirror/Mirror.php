@@ -29,8 +29,8 @@ class Mirror {
 		'WikiMirrorRemote'
 	];
 
-	/** @var string Group for process cache (1000 entries stored) */
-	public const PC_GROUP = 'mirror:1000';
+	/** @var string Group for process cache (600 entries stored) */
+	public const PC_GROUP = 'mirror:600';
 
 	/** @var int Version of data stored in process cache (increment to invalidate all existing cache entries) */
 	public const PC_VERSION = 3;
@@ -187,9 +187,10 @@ class Mirror {
 				return $this->getLiveText( $page );
 			},
 			[
-				'pcTTL' => $this->cache::TTL_PROC_LONG,
+				'pcTTL' => WANObjectCache::TTL_PROC_LONG,
 				'pcGroup' => self::PC_GROUP,
-				'staleTTL' => $this->cache::TTL_DAY
+				'staleTTL' => WANObjectCache::TTL_DAY,
+				'lockTSE' => 10,
 			]
 		);
 
