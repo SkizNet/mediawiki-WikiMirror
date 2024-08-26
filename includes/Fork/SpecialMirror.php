@@ -17,17 +17,17 @@ use Wikimedia\Rdbms\ILoadBalancer;
 use WikiMirror\Mirror\Mirror;
 
 class SpecialMirror extends UnlistedSpecialPage {
-	/** @var Title */
-	protected $title;
+	/** @var Title|null */
+	protected ?Title $title;
 
 	/** @var ILoadBalancer */
-	protected $loadBalancer;
+	protected ILoadBalancer $loadBalancer;
 
 	/** @var Mirror */
-	protected $mirror;
+	protected Mirror $mirror;
 
 	/** @var string */
-	private $comment;
+	private string $comment;
 
 	/**
 	 * Special page to un-fork a deleted page.
@@ -48,16 +48,11 @@ class SpecialMirror extends UnlistedSpecialPage {
 	 * Display the form or perform the fork.
 	 *
 	 * @param string|null $subPage Title being forked
-	 * @throws ReadOnlyError If wiki is read only
-	 * @throws ErrorPageError If given title cannot be forked for any reason
-	 * @throws MWException On internal error
-	 * @throws OOUI\Exception If a programming error occurs
 	 */
 	public function execute( $subPage ) {
+		parent::execute( $subPage );
 		$this->useTransactionalTimeLimit();
 		$this->checkReadOnly();
-		$this->setHeaders();
-		$this->outputHeader();
 
 		$this->title = Title::newFromText( $subPage );
 		if ( $this->title === null ) {
@@ -84,8 +79,6 @@ class SpecialMirror extends UnlistedSpecialPage {
 		$out->addModules( 'mediawiki.misc-authed-ooui' );
 
 		$request = $this->getRequest();
-		$user = $this->getUser();
-
 		$this->comment = $request->getText( 'wpComment' );
 
 		$editTokenValid = $this->getContext()->getCsrfTokenSet()->matchTokenField();
@@ -99,9 +92,6 @@ class SpecialMirror extends UnlistedSpecialPage {
 
 	/**
 	 * Restore a page to being mirrored.
-	 *
-	 * @throws MWException On internal error
-	 * @throws Exception When failing to publish log entries
 	 */
 	protected function doMirror() {
 		$dbw = $this->loadBalancer->getConnection( DB_PRIMARY );

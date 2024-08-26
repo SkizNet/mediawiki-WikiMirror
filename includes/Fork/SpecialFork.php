@@ -26,29 +26,29 @@ use WikiMirror\Mirror\Mirror;
 use WikiRevision;
 
 class SpecialFork extends UnlistedSpecialPage {
-	/** @var Title */
-	protected $title;
+	/** @var Title|null */
+	protected ?Title $title;
 
 	/** @var ILoadBalancer */
-	protected $loadBalancer;
+	protected ILoadBalancer $loadBalancer;
 
 	/** @var Mirror */
-	protected $mirror;
+	protected Mirror $mirror;
 
 	/** @var OldRevisionImporter */
-	protected $importer;
+	protected OldRevisionImporter $importer;
 
 	/** @var UserOptionsLookup */
-	protected $lookup;
+	protected UserOptionsLookup $lookup;
 
 	/** @var bool */
-	private $watch;
+	private bool $watch;
 
 	/** @var bool */
-	private $import;
+	private bool $import;
 
 	/** @var string */
-	private $comment;
+	private string $comment;
 
 	/**
 	 * Special page to fork a mirrored page's content locally.
@@ -81,10 +81,10 @@ class SpecialFork extends UnlistedSpecialPage {
 	 * @throws OOUI\Exception If a programming error occurs
 	 */
 	public function execute( $subPage ) {
+		// do permission checks, etc.
+		parent::execute( $subPage );
 		$this->useTransactionalTimeLimit();
 		$this->checkReadOnly();
-		$this->setHeaders();
-		$this->outputHeader();
 
 		$this->title = Title::newFromText( $subPage );
 		if ( $this->title === null ) {
