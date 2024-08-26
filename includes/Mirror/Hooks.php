@@ -5,6 +5,7 @@
 
 namespace WikiMirror\Mirror;
 
+use DeviceDetector\Parser\Bot as BotParser;
 use HtmlArmor;
 use MediaWiki\Hook\BeforePageDisplayHook;
 use MediaWiki\Hook\SkinTemplateNavigation__UniversalHook;
@@ -153,10 +154,11 @@ class Hooks implements
 		// Don't display mirrored pages to crawlers since they aren't supposed to index/follow these anyway
 		// This doesn't detect every bot in existence, but it does get most of the prominent ones
 		$userAgent = RequestContext::getMain()->getRequest()->getHeader( 'User-Agent' );
-		$isBot = $userAgent !== false
-			&& str_contains( $userAgent, '+http' )
-			&& str_contains( $userAgent, 'bot' );
+		$botParser = new BotParser();
+		$botParser->setUserAgent( $userAgent );
+		$botParser->discardDetails();
 
+		$isBot = (bool)$botParser->parse();
 		if ( !$isBot && $this->mirror->canMirror( $title, true ) ) {
 			$page = new WikiRemotePage( $title );
 			return false;
