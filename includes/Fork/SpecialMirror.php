@@ -4,13 +4,10 @@ namespace WikiMirror\Fork;
 
 use CommentStore;
 use ErrorPageError;
-use Exception;
 use Html;
 use ManualLogEntry;
 use MediaWiki\Session\CsrfTokenSet;
-use MWException;
 use OOUI;
-use ReadOnlyError;
 use Title;
 use UnlistedSpecialPage;
 use Wikimedia\Rdbms\ILoadBalancer;
