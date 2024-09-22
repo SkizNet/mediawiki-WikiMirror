@@ -3,8 +3,12 @@
 namespace WikiMirror\Search;
 
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\MediaWikiTitleCodec;
+use MediaWiki\Title\Title;
 use PaginatingSearchEngine;
 use SearchEngine;
+use Wikimedia\Rdbms\IExpression;
+use Wikimedia\Rdbms\LikeValue;
 use WikiMirror\Mirror\Mirror;
 
 class MirrorSearch extends SearchEngine implements PaginatingSearchEngine {
@@ -100,5 +104,72 @@ class MirrorSearch extends SearchEngine implements PaginatingSearchEngine {
 	/** @inheritDoc */
 	protected function doSearchTitle( $term ) {
 		return $this->doApiSearch( $term, 'title' );
+	}
+
+	/** @inheritDoc */
+	protected function simplePrefixSearch( $search ) {
+		$namespaces = $this->namespaces;
+		$limit = $this->limit;
+		$offset = $this->offset;
+
+		// Copied and modified from TitlePrefixSearch::defaultSearchBackend
+		if ( !$namespaces ) {
+			$namespaces = [ NS_MAIN ];
+		}
+
+		if ( in_array( NS_SPECIAL, $namespaces ) ) {
+			// For now, if special is included, ignore the other namespaces
+			return parent::simplePrefixSearch( $search );
+		}
+
+		// Construct suitable prefix for each namespace. They differ in cases where
+		// some namespaces always capitalize and some don't.
+		$prefixes = [];
+		// Allow to do a prefix search for e.g. "Talk:"
+		if ( $search === '' ) {
+			$prefixes[$search] = $namespaces;
+		} else {
+			// Don't just ignore input like "[[Foo]]", but try to search for "Foo"
+			$search = preg_replace( MediaWikiTitleCodec::getTitleInvalidRegex(), '', $search );
+			foreach ( $namespaces as $namespace ) {
+				$title = Title::makeTitleSafe( $namespace, $search );
+				if ( $title ) {
+					$prefixes[ $title->getDBkey() ][] = $namespace;
+				}
+			}
+		}
+		if ( !$prefixes ) {
+			return [];
+		}
+
+		$services = MediaWikiServices::getInstance();
+		$dbr = $services->getConnectionProvider()->getReplicaDatabase();
+		// Often there is only one prefix that applies to all requested namespaces,
+		// but sometimes there are two if some namespaces do not always capitalize.
+		$conds = [];
+		foreach ( $prefixes as $prefix => $namespaces ) {
+			$expr = $dbr->expr( 'page_namespace', '=', $namespaces );
+			if ( $prefix !== '' ) {
+				$expr = $expr->and(
+					'page_title',
+					IExpression::LIKE,
+					new LikeValue( (string)$prefix, $dbr->anyString() )
+				);
+			}
+			$conds[] = $expr;
+		}
+
+		// alias remote_page field names to match that of the page table so that newTitleArrayFromResult() works,
+		// except omit page_id since the page doesn't exist locally and we don't want to cause id collisions
+		$queryBuilder = $dbr->newSelectQueryBuilder()
+			->select( [ 'page_namespace' => 'rp_namespace', 'page_title' => 'rp_title' ] )
+			->from( 'remote_page' )
+			->where( $dbr->orExpr( $conds ) )
+			->orderBy( [ 'page_title', 'page_namespace' ] )
+			->limit( $limit )
+			->offset( $offset );
+		$res = $queryBuilder->caller( __METHOD__ )->fetchResultSet();
+
+		return iterator_to_array( $services->getTitleFactory()->newTitleArrayFromResult( $res ) );
 	}
 }
