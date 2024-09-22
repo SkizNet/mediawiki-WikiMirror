@@ -159,7 +159,7 @@ class MirrorSearch extends SearchEngine implements PaginatingSearchEngine {
 		$queryBuilder = $dbr->newSelectQueryBuilder()
 			->select( [ 'page_namespace' => 'rp_namespace', 'page_title' => 'rp_title' ] )
 			->from( 'remote_page' )
-			->where( $dbr->orExpr( $conds ) )
+			->where( $dbr->makeList( $conds, LIST_OR ) )
 			->orderBy( [ 'page_title', 'page_namespace' ] )
 			->limit( $limit )
 			->offset( $offset );
