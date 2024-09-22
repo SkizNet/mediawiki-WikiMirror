@@ -5,10 +5,9 @@ namespace WikiMirror\Search;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\MediaWikiTitleCodec;
 use MediaWiki\Title\Title;
+use MediaWiki\Title\TitleArrayFromResult;
 use PaginatingSearchEngine;
 use SearchEngine;
-use Wikimedia\Rdbms\IExpression;
-use Wikimedia\Rdbms\LikeValue;
 use WikiMirror\Mirror\Mirror;
 
 class MirrorSearch extends SearchEngine implements PaginatingSearchEngine {
@@ -143,20 +142,16 @@ class MirrorSearch extends SearchEngine implements PaginatingSearchEngine {
 		}
 
 		$services = MediaWikiServices::getInstance();
-		$dbr = $services->getConnectionProvider()->getReplicaDatabase();
+		$dbr = $services->getDBLoadBalancer()->getConnection( DB_REPLICA );
 		// Often there is only one prefix that applies to all requested namespaces,
 		// but sometimes there are two if some namespaces do not always capitalize.
 		$conds = [];
 		foreach ( $prefixes as $prefix => $namespaces ) {
-			$expr = $dbr->expr( 'page_namespace', '=', $namespaces );
+			$condition = [ 'page_namespace' => $namespaces ];
 			if ( $prefix !== '' ) {
-				$expr = $expr->and(
-					'page_title',
-					IExpression::LIKE,
-					new LikeValue( (string)$prefix, $dbr->anyString() )
-				);
+				$condition[] = 'page_title' . $dbr->buildLike( $prefix, $dbr->anyString() );
 			}
-			$conds[] = $expr;
+			$conds[] = $dbr->makeList( $condition, LIST_AND );
 		}
 
 		// alias remote_page field names to match that of the page table so that newTitleArrayFromResult() works,
@@ -170,6 +165,6 @@ class MirrorSearch extends SearchEngine implements PaginatingSearchEngine {
 			->offset( $offset );
 		$res = $queryBuilder->caller( __METHOD__ )->fetchResultSet();
 
-		return iterator_to_array( $services->getTitleFactory()->newTitleArrayFromResult( $res ) );
+		return iterator_to_array( new TitleArrayFromResult( $res ) );
 	}
 }
