@@ -4,6 +4,7 @@ namespace WikiMirror\Search;
 
 use ISearchResultSet;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 use PaginatingSearchEngine;
 use SearchEngine;
 use Status;
@@ -42,7 +43,7 @@ class CombinedSearch extends SearchEngine implements PaginatingSearchEngine {
 
 		foreach ( $this->engines as $engine ) {
 			if ( $limit <= 0 ) {
-				continue;
+				break;
 			}
 
 			$engine->setLimitOffset( $limit, $offset );
@@ -90,5 +91,27 @@ class CombinedSearch extends SearchEngine implements PaginatingSearchEngine {
 	/** @inheritDoc */
 	protected function doSearchTitle( $term ) {
 		return $this->doCombinedSearch( $term, 'doSearchTitle' );
+	}
+
+	/** @inheritDoc */
+	protected function simplePrefixSearch( $search ) {
+		$results = [];
+		$numEngines = count( $this->engines );
+		// simple pagination; some results will be repeated between pages but this is primarily used by opensearch
+		// which doesn't page at all, so that shouldn't come up much in practice anyway
+		$offset = (int)( $this->offset / $numEngines );
+
+		foreach ( $this->engines as $engine ) {
+			// always pull a full set of results in case one engine returns nothing
+			$engine->setLimitOffset( $this->limit, $offset );
+			$results = array_merge( $results, $engine->simplePrefixSearch( $search ) );
+		}
+
+		usort( $results, static function ( Title $a, Title $b ) {
+			return $a->getText() <=> $b->getText() ?: $a->getNamespace() <=> $b->getNamespace();
+		} );
+
+		// return the most relevant results
+		return array_slice( $results, 0, $this->limit );
 	}
 }
