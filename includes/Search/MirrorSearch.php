@@ -147,9 +147,9 @@ class MirrorSearch extends SearchEngine implements PaginatingSearchEngine {
 		// but sometimes there are two if some namespaces do not always capitalize.
 		$conds = [];
 		foreach ( $prefixes as $prefix => $namespaces ) {
-			$condition = [ 'page_namespace' => $namespaces ];
+			$condition = [ 'rp_namespace' => $namespaces ];
 			if ( $prefix !== '' ) {
-				$condition[] = 'page_title' . $dbr->buildLike( $prefix, $dbr->anyString() );
+				$condition[] = 'rp_title' . $dbr->buildLike( $prefix, $dbr->anyString() );
 			}
 			$conds[] = $dbr->makeList( $condition, LIST_AND );
 		}
