@@ -614,7 +614,7 @@ class Mirror {
 			];
 
 			$data = $this->getRemoteApiResponse( $params, __METHOD__ );
-			if ( $data === false || isset( $data['interwiki'] ) || $data['pageids'][0] == '-1' ) {
+			if ( !$data ) {
 				wfDebug( "Unable to fetch redirect info for {$pageName}." );
 				return null;
 			}
