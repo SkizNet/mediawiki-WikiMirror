@@ -67,4 +67,8 @@ class HtmlOutputRendererHelperManipulator extends HtmlOutputRendererHelper {
 			$parserOutputProperty->setValue( $this, $page->getParserOutput() );
 		}
 	}
+
+	public function getHtmlOutputContentLanguage(): Bcp47Code {
+		return $this->getHtml()->getLanguage() ?? parent::getHtmlOutputContentLanguage();
+	}
 }

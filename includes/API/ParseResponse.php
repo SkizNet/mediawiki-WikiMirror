@@ -142,13 +142,6 @@ class ParseResponse {
 			$output->setExtensionData( 'parsoid-render-id', "{$revId}/{$uniqueId}" );
 		}
 
-		$output->setExtensionData(
-			PageBundleParserOutputConverter::PARSOID_PAGE_BUNDLE_KEY,
-			[
-				'headers' => [ 'content-language' => $this->pageInfo->pageLanguage ],
-			]
-		);
-
 		return $output;
 	}
 
