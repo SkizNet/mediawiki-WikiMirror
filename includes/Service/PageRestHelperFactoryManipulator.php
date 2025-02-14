@@ -2,10 +2,10 @@
 
 namespace WikiMirror\Service;
 
-use MediaWiki\Parser\ParserOptions;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Rest\Handler\Helper\HtmlOutputRendererHelper;
 use MediaWiki\Rest\Handler\Helper\PageRestHelperFactory;
+use ParserOptions;
 use ReflectionClass;
 
 class PageRestHelperFactoryManipulator extends PageRestHelperFactory {

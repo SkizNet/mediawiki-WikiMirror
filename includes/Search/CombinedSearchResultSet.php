@@ -59,6 +59,7 @@ class CombinedSearchResultSet implements ISearchResultSet {
 	 */
 	public function isApproximateTotalHits(): bool {
 		return array_reduce( $this->results, static function ( $carry, ISearchResultSet $item ) {
+			// @phan-suppress-next-line PhanUndeclaredMethod
 			return $carry || $item->isApproximateTotalHits();
 		}, false );
 	}
