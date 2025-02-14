@@ -57,6 +57,15 @@ class CombinedSearchResultSet implements ISearchResultSet {
 	/**
 	 * @inheritDoc
 	 */
+	public function isApproximateTotalHits(): bool {
+		return array_reduce( $this->results, static function ( $carry, ISearchResultSet $item ) {
+			return $carry || $item->isApproximateTotalHits();
+		}, false );
+	}
+
+	/**
+	 * @inheritDoc
+	 */
 	public function hasRewrittenQuery() {
 		return array_reduce( $this->results, static function ( $carry, ISearchResultSet $item ) {
 			return $carry || $item->hasRewrittenQuery();

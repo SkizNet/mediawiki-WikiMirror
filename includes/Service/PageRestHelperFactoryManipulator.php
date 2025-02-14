@@ -2,6 +2,7 @@
 
 namespace WikiMirror\Service;
 
+use MediaWiki\Parser\ParserOptions;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Rest\Handler\Helper\HtmlOutputRendererHelper;
 use MediaWiki\Rest\Handler\Helper\PageRestHelperFactory;
@@ -23,7 +24,8 @@ class PageRestHelperFactoryManipulator extends PageRestHelperFactory {
 		array $parameters = [],
 		?Authority $authority = null,
 		$revision = null,
-		bool $lenientRevHandling = false
+		bool $lenientRevHandling = false,
+		?ParserOptions $parserOptions = null
 	): HtmlOutputRendererHelper {
 		// in 1.41 and 1.42 this only takes one arg: $lenientRevHandling,
 		// however that'd be passed to us as $page
@@ -37,7 +39,8 @@ class PageRestHelperFactoryManipulator extends PageRestHelperFactory {
 				$parameters,
 				$authority,
 				$revision,
-				$lenientRevHandling
+				$lenientRevHandling,
+				$parserOptions
 			);
 		}
 

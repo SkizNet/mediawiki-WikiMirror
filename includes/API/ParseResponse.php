@@ -3,7 +3,6 @@
 namespace WikiMirror\API;
 
 use MediaWiki\Languages\LanguageFactory;
-use MediaWiki\Parser\Parsoid\PageBundleParserOutputConverter;
 use ParserOutput;
 use Title;
 use Wikimedia\UUID\GlobalIdGenerator;
