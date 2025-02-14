@@ -54,6 +54,11 @@ class WikiRemotePage extends WikiPage {
 		return $this->mirrorRecord->getLatest( $wikiId );
 	}
 
+	/** @inheritDoc */
+	public function getContentModel() {
+		return CONTENT_MODEL_MIRROR;
+	}
+
 	/**@inheritDoc */
 	public function loadPageData( $from = 'fromdb' ) {
 		$from = self::convertSelectType( $from );
