@@ -126,6 +126,16 @@
 			"styles": [
 				"fork.css"
 			]
+		},
+		"ext.WikiMirror.popup": {
+			"localBasePath": "resources/ext.WikiMirror.popup",
+			"remoteExtPath": "WikiMirror/resources/ext.WikiMirror.popup",
+			"packageFiles": [
+				"index.js"
+			],
+			"dependencies": [
+				"mediawiki.ForeignApi"
+			]
 		}
 	},
 	"SearchMappings": {
@@ -139,6 +149,13 @@
 	"ServiceWiringFiles": [
 		"includes/ServiceWiring.php"
 	],
+	"attributes": {
+		"Popups": {
+			"PluginModules": [
+				"ext.WikiMirror.popup"
+			]
+		}
+	},
 	"callback": "WikiMirror\\Setup::callback",
 	"requires": {
 		"MediaWiki": ">= 1.41.0",
