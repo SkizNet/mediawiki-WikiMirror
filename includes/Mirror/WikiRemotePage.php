@@ -4,15 +4,57 @@ namespace WikiMirror\Mirror;
 
 use IDBAccessObject;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Page\ExistingPageRecord;
+use MediaWiki\Page\PageIdentity;
 use MWException;
 use WikiMirror\API\PageInfoResponse;
 use WikiMirror\Compat\ReflectionHelper;
 use WikiPage;
 
 class WikiRemotePage extends WikiPage {
-	/**
-	 * @inheritDoc
-	 */
+	private MirrorPageRecord $mirrorRecord;
+
+	public function __construct( PageIdentity $pageIdentity, MirrorPageRecord $mirrorRecord ) {
+		parent::__construct( $pageIdentity );
+		$this->mirrorRecord = $mirrorRecord;
+	}
+
+	/** @inheritDoc */
+	public function exists(): bool {
+		return $this->mirrorRecord->exists();
+	}
+
+	/** @inheritDoc */
+	public function getId( $wikiId = self::LOCAL ): int {
+		return $this->mirrorRecord->getId( $wikiId );
+	}
+
+	/** @inheritDoc */
+	public function isNew() {
+		return $this->mirrorRecord->isNew();
+	}
+
+	/** @inheritDoc */
+	public function isRedirect() {
+		return $this->mirrorRecord->isRedirect();
+	}
+
+	/** @inheritDoc */
+	public function getTouched() {
+		return $this->mirrorRecord->getTouched();
+	}
+
+	/** @inheritDoc */
+	public function getLanguage() {
+		return $this->mirrorRecord->getLanguage();
+	}
+
+	/** @inheritDoc */
+	public function getLatest( $wikiId = self::LOCAL ) {
+		return $this->mirrorRecord->getLatest( $wikiId );
+	}
+
+	/**@inheritDoc */
 	public function loadPageData( $from = 'fromdb' ) {
 		$from = self::convertSelectType( $from );
 		if ( !is_int( $from ) ) {
@@ -57,10 +99,7 @@ class WikiRemotePage extends WikiPage {
 		$this->loadFromRow( $row, IDBAccessObject::READ_LATEST );
 	}
 
-	/**
-	 * @inheritDoc
-	 * @throws MWException On error
-	 */
+	/** @inheritDoc */
 	protected function loadLastEdit() {
 		/** @var Mirror $mirror */
 		$mirror = MediaWikiServices::getInstance()->get( 'Mirror' );
@@ -77,10 +116,7 @@ class WikiRemotePage extends WikiPage {
 		ReflectionHelper::callPrivateMethod( WikiPage::class, 'setLastEdit', $this, [ $revision ] );
 	}
 
-	/**
-	 * @inheritDoc
-	 * @throws MWException On error
-	 */
+	/** @inheritDoc */
 	public function getRedirectTarget() {
 		/** @var Mirror $mirror */
 		$mirror = MediaWikiServices::getInstance()->get( 'Mirror' );
@@ -93,5 +129,10 @@ class WikiRemotePage extends WikiPage {
 		$pageData = $status->getValue();
 
 		return $pageData->redirect;
+	}
+
+	/** @inheritDoc */
+	public function toPageRecord(): ExistingPageRecord {
+		return $this->mirrorRecord;
 	}
 }

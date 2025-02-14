@@ -154,7 +154,6 @@ class Hooks implements
 		// Don't display mirrored pages to crawlers since they aren't supposed to index/follow these anyway
 		// This doesn't detect every bot in existence, but it does get most of the prominent ones
 		$requestContext = RequestContext::getMain();
-		$user = $requestContext->getUser();
 		$userAgent = $requestContext->getRequest()->getHeader( 'User-Agent' );
 		$botParser = new BotParser();
 		$botParser->setUserAgent( $userAgent );
@@ -162,7 +161,8 @@ class Hooks implements
 
 		$isBot = (bool)$botParser->parse();
 		if ( !$isBot && $this->mirror->canMirror( $title, true ) ) {
-			$page = new WikiRemotePage( $title );
+			$record = $this->mirror->getMirrorPageRecord( $title->getNamespace(), $title->getDBkey() );
+			$page = new WikiRemotePage( $title, $record );
 			return false;
 		}
 
