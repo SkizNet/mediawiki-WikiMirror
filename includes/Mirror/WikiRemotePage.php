@@ -14,6 +14,7 @@ use WikiPage;
 class WikiRemotePage extends WikiPage {
 	private MirrorPageRecord $mirrorRecord;
 
+	// @phan-suppress-next-line PhanTypeMismatchArgumentNullable This is only called by our code and we control params
 	public function __construct( PageIdentity $pageIdentity, MirrorPageRecord $mirrorRecord ) {
 		parent::__construct( $pageIdentity );
 		$this->mirrorRecord = $mirrorRecord;
@@ -59,7 +60,7 @@ class WikiRemotePage extends WikiPage {
 		return CONTENT_MODEL_MIRROR;
 	}
 
-	/**@inheritDoc */
+	/** @inheritDoc */
 	public function loadPageData( $from = 'fromdb' ) {
 		$from = self::convertSelectType( $from );
 		if ( !is_int( $from ) ) {
