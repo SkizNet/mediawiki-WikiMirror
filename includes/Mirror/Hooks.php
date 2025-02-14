@@ -24,7 +24,6 @@ use RequestContext;
 use Skin;
 use SkinTemplate;
 use SpecialPage;
-use ThrottledError;
 use Title;
 use User;
 use WikiPage;
@@ -163,18 +162,6 @@ class Hooks implements
 
 		$isBot = (bool)$botParser->parse();
 		if ( !$isBot && $this->mirror->canMirror( $title, true ) ) {
-			// Check rate limits; we don't rate-limit pages in the Template or Module namespaces since
-			// these are often dependencies on other pages and would quickly blow through the limits.
-			// Because we only rate-limit articles, fairly low limits are acceptable here.
-			$excludedNs = [ NS_TEMPLATE ];
-			if ( defined( 'NS_MODULE' ) ) {
-				$excludedNs[] = NS_MODULE;
-			}
-
-			if ( !in_array( $title->getNamespace(), $excludedNs ) && $user->pingLimiter( 'mirror' ) ) {
-				throw new ThrottledError();
-			}
-
 			$page = new WikiRemotePage( $title );
 			return false;
 		}

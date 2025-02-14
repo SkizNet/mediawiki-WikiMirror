@@ -10,7 +10,9 @@ use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Page\PageIdentity;
 use MediaWiki\Page\RedirectLookup;
 use MediaWiki\Title\TitleFormatter;
+use RequestContext;
 use Status;
+use ThrottledError;
 use Title;
 use WANObjectCache;
 use Wikimedia\Rdbms\ILoadBalancer;
@@ -564,6 +566,20 @@ class Mirror {
 			// cache a null value here so we don't need to continually carry out these checks
 			wfDebugLog( 'WikiMirror', "{$pageName} is an external or sensitive page; not mirroring." );
 			return null;
+		}
+
+		// Check rate limits; we don't rate-limit pages in the Template or Module namespaces since
+		// these are often dependencies on other pages and would quickly blow through the limits.
+		// Because we only rate-limit articles, fairly low limits are acceptable here.
+		// If this succeeds, also let the fetch for page text succeed (don't double-charge against limits).
+		$excludedNs = [ NS_TEMPLATE ];
+		if ( defined( 'NS_MODULE' ) ) {
+			$excludedNs[] = NS_MODULE;
+		}
+
+		$user = RequestContext::getMain()->getUser();
+		if ( !in_array( $page->getNamespace(), $excludedNs ) && $user->pingLimiter( 'mirror' ) ) {
+			throw new ThrottledError();
 		}
 
 		// check if the remote page exists
