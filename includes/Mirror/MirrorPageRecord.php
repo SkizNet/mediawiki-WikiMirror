@@ -29,6 +29,9 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 	/** @var Mirror */
 	private Mirror $mirror;
 
+	/** @var PageInfoResponse|null */
+	private ?PageInfoResponse $pageInfo = null;
+
 	/**
 	 * Constructor
 	 *
@@ -99,9 +102,14 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 	}
 
 	private function getPageInfo(): PageInfoResponse {
+		if ( $this->pageInfo !== null ) {
+			return $this->pageInfo;
+		}
+
 		$status = $this->mirror->getCachedPage( $this );
 		if ( $status->isOK() ) {
-			return $status->getValue();
+			$this->pageInfo = $status->getValue();
+			return $this->pageInfo;
 		}
 
 		// 1.41 compat; use StatusFormatter once we only support 1.42+
