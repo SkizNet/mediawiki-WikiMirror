@@ -146,14 +146,17 @@ class Mirror {
 			return Status::newFatal( 'wikimirror-no-mirror', $pageName );
 		}
 
+		$live = false;
 		$id = hash( 'sha256', $pageName );
+		$cacheKey = $this->cache->makeKey( 'mirror', 'remote-info', self::PC_VERSION, $id );
 		wfDebugLog( 'WikiMirror', "Retrieving cached info for {$pageName}." );
 		$value = $this->cache->getWithSetCallback(
-			$this->cache->makeKey( 'mirror', 'remote-info', self::PC_VERSION, $id ),
+			$cacheKey,
 			$this->options->get( 'TranscludeCacheExpiry' ),
-			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $page, $pageName ) {
+			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $page, $pageName, &$live ) {
 				wfDebugLog( 'WikiMirror', "{$pageName}: Info not found in cache." );
-				return $this->getLivePage( $page );
+				$live = true;
+				return $this->getLivePage( $page ) ?? false;
 			},
 			[
 				'pcTTL' => $this->cache::TTL_PROC_LONG,
@@ -161,6 +164,11 @@ class Mirror {
 				'staleTTL' => $this->cache::TTL_DAY
 			]
 		);
+
+		if ( !$value && !$live ) {
+			// invalid cached value; attempt re-fetch
+			$value = $this->getLivePage( $page );
+		}
 
 		if ( !$value ) {
 			return Status::newFatal( 'wikimirror-no-mirror', $pageName );
@@ -186,12 +194,12 @@ class Mirror {
 			$this->options->get( 'TranscludeCacheExpiry' ),
 			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $page, $pageName ) {
 				wfDebugLog( 'WikiMirror', "{$pageName}: Text not found in cache." );
-				return $this->getLiveText( $page );
+				return $this->getLiveText( $page ) ?? false;
 			},
 			[
-				'pcTTL' => WANObjectCache::TTL_PROC_LONG,
+				'pcTTL' => $this->cache::TTL_PROC_LONG,
 				'pcGroup' => self::PC_GROUP,
-				'staleTTL' => WANObjectCache::TTL_DAY,
+				'staleTTL' => $this->cache::TTL_DAY,
 				'lockTSE' => 10,
 			]
 		);
