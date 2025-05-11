@@ -87,9 +87,18 @@ class RemoteRevisionRecord extends RevisionRecord {
 	 *
 	 * @param SlotRecord $record Remote slot record
 	 * @return Content Content of slot
-	 * @throws MWException
 	 */
 	public function getRemoteSlotContent( SlotRecord $record ) {
 		return new MirrorContent( $this->remoteData );
+	}
+
+	/**
+	 * Mirrored revisions are always the current version as exists on the remote wiki.
+	 * This enables some optimizations in JS vars preventing additional remote API calls.
+	 *
+	 * @return true
+	 */
+	public function isCurrent() {
+		return true;
 	}
 }
