@@ -20,6 +20,7 @@ class RemoteRevisionRecord extends RevisionRecord {
 	 */
 	public function __construct( PageInfoResponse $remoteData ) {
 		$this->remoteData = $remoteData;
+		$this->mId = $remoteData->lastRevisionId;
 
 		$title = $remoteData->getTitle();
 		$slots = $this->getRemoteSlotRecords();
