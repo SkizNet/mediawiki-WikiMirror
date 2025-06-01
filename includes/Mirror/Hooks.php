@@ -162,6 +162,11 @@ class Hooks implements
 		$isBot = (bool)$botParser->parse();
 		if ( !$isBot && $this->mirror->canMirror( $title, true ) ) {
 			$record = $this->mirror->getMirrorPageRecord( $title->getNamespace(), $title->getDBkey() );
+			if ( $record === null ) {
+				// can't mirror after all, use default logic
+				return true;
+			}
+
 			$page = new WikiRemotePage( $title, $record );
 			return false;
 		}

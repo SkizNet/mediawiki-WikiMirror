@@ -767,6 +767,9 @@ class Mirror {
 		if ( $cacheDir !== null ) {
 			$prefix = substr( sha1( $pageName ), 0, 2 );
 			$filename = "{$cacheDir}/{$remote}/{$pageNamespace}/{$prefix}/{$pageId}.json";
+			// TOCTTOU race conditions prevent us from easily determining if file_get_contents would succeed
+			// Simply try it and let it fail (without raising warnings) if the file doesn't exist or we can't read it
+			// phpcs:ignore Generic.PHP.NoSilencedErrors.Discouraged
 			$json = @file_get_contents( $filename );
 			if ( $json !== false ) {
 				try {

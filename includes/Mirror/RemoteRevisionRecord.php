@@ -6,7 +6,6 @@ use Content;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Revision\RevisionSlots;
 use MediaWiki\Revision\SlotRecord;
-use MWException;
 use WikiMirror\API\PageInfoResponse;
 
 class RemoteRevisionRecord extends RevisionRecord {

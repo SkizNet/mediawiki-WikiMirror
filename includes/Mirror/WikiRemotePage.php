@@ -14,7 +14,10 @@ use WikiPage;
 class WikiRemotePage extends WikiPage {
 	private MirrorPageRecord $mirrorRecord;
 
-	// @phan-suppress-next-line PhanTypeMismatchArgumentNullable This is only called by our code and we control params
+	/**
+	 * @param PageIdentity $pageIdentity
+	 * @param MirrorPageRecord $mirrorRecord
+	 */
 	public function __construct( PageIdentity $pageIdentity, MirrorPageRecord $mirrorRecord ) {
 		parent::__construct( $pageIdentity );
 		$this->mirrorRecord = $mirrorRecord;
