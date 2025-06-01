@@ -15,7 +15,6 @@ namespace WikiMirror\Maintenance {
 	use Maintenance;
 	use Wikimedia\AtEase\AtEase;
 
-	// phpcs:ignore MediaWiki.Files.ClassMatchesFilename.WrongCase
 	class UpdateRemotePage extends Maintenance {
 		public function __construct() {
 			parent::__construct();

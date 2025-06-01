@@ -1,4 +1,4 @@
--- This file is intended to be run as part of the updateRemotePage.php maintenance script
+-- This file is intended to be run as part of the WikiMirror:UpdateRemotePage maintenance script
 -- It should *NOT* be run standalone!
 
 DROP TABLE IF EXISTS /*_*/remote_page2;

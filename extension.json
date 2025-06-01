@@ -1,7 +1,7 @@
 {
 	"name": "WikiMirror",
 	"namemsg": "wikimirror-extensionname",
-	"version": "0.16.0",
+	"version": "0.17.0",
 	"author": [
 		"Ryan Schmidt"
 	],
@@ -16,6 +16,13 @@
 			"description": "When forking pages, whether or not imported revisions will be assigned to local users should their username match",
 			"descriptionmsg": "wikimirror-config-assignknownusers",
 			"public": true
+		},
+		"WikiMirrorCacheDirectory": {
+			"value": null,
+			"path": true,
+			"description": "Path to local cache of mirrored page HTML and wikitext, in Wikimedia Enterprise API JSON format",
+			"descriptionmsg": "wikimirror-config-cachedirectory",
+			"public": false
 		},
 		"WikiMirrorRemote": {
 			"value": null,

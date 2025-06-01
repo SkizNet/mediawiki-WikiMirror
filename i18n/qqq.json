@@ -15,6 +15,7 @@
 	"wikimirror-action-mirror": "Text displayed in the navigation menu which allows users to restore the mirrored version of a page.",
 	"wikimirror-api-error": "{{optional}} Error message added to server logs when an error is encountered. This message is not exposed to users.",
 	"wikimirror-config-assignknownusers": "{{optional}} Description of the configuration variable $wgWikiMirrorAssignKnownUsers. This message is not exposed to users.",
+	"wikimirror-config-cachedirectory": "{{optional}} Description of the configuration variable $wgWikiMirrorCacheDirectory. This message is not exposed to users.",
 	"wikimirror-config-remote": "{{optional}} Description of the configuration variable $wgWikiMirrorRemote. This message is not exposed to users.",
 	"wikimirror-config-searchmaxresults": "{{optional}} Description of the configuration variable $wgWikiMirrorSearchMaxResults. This message is not exposed to users.",
 	"wikimirror-delete-success": "Success message displayed when a page is forked without importing any revisions.",

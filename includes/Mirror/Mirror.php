@@ -2,6 +2,7 @@
 
 namespace WikiMirror\Mirror;
 
+use JsonException;
 use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Interwiki\InterwikiLookup;
@@ -17,6 +18,7 @@ use Title;
 use WANObjectCache;
 use Wikimedia\Rdbms\ILoadBalancer;
 use Wikimedia\UUID\GlobalIdGenerator;
+use WikiMirror\API\EnterpriseCacheResponse;
 use WikiMirror\API\PageInfoResponse;
 use WikiMirror\API\ParseResponse;
 use WikiMirror\API\SiteInfoResponse;
@@ -28,7 +30,8 @@ class Mirror {
 		'ScriptPath',
 		'Server',
 		'TranscludeCacheExpiry',
-		'WikiMirrorRemote'
+		'WikiMirrorCacheDirectory',
+		'WikiMirrorRemote',
 	];
 
 	/** @var string Group for process cache (600 entries stored) */
@@ -521,6 +524,25 @@ class Mirror {
 		/** @var PageInfoResponse $pageInfo */
 		$pageInfo = $status->getValue();
 
+		$cache = $this->getEnterpriseCache( $page );
+		if ( $cache !== null ) {
+			return [
+				'title' => $cache->pageTitle,
+				'pageid' => $cache->pageId,
+				'revid' => $cache->revisionId,
+				'text' => $cache->pageHtml,
+				'langlinks' => [],
+				'categories' => [],
+				'modules' => [],
+				'modulescripts' => [],
+				'modulestyles' => [],
+				'jsconfigvars' => [],
+				'indicators' => [],
+				'wikitext' => $cache->pageText,
+				'properties' => [],
+			];
+		}
+
 		$params = [
 			'action' => 'parse',
 			'oldid' => $pageInfo->lastRevisionId,
@@ -574,6 +596,31 @@ class Mirror {
 			// cache a null value here so we don't need to continually carry out these checks
 			wfDebugLog( 'WikiMirror', "{$pageName} is an external or sensitive page; not mirroring." );
 			return null;
+		}
+
+		// If we have a local cache, check that first before hitting the remote API
+		$cache = $this->getEnterpriseCache( $page );
+		if ( $cache !== null ) {
+			$pageLang = $this->languageFactory->getLanguage( $cache->pageLanguage );
+			return [
+				'pageid' => $cache->pageId,
+				'ns' => $cache->pageNamespace,
+				'title' => $cache->pageTitle,
+				// right now assume everything from the WME API is wikitext, since content model isn't exposed
+				'contentmodel' => 'wikitext',
+				'pagelanguage' => $pageLang->getCode(),
+				'pagelanguagehtmlcode' => $pageLang->getHtmlCode(),
+				'pagelanguagedir' => $pageLang->getDir(),
+				'touched' => $cache->lastModified,
+				'lastrevid' => $cache->revisionId,
+				'length' => $cache->revisionSize,
+				// redirects aren't present directly in the API as actual pages
+				'redirect' => false,
+				// DISPLAYTITLE title isn't exposed as a separate thing, just use normal title for now
+				'displaytitle' => $cache->pageTitle,
+				// actual API also returns a revisions array, however we mark it as nullable
+				// we cannot provide all of the details needed for that so we omit it entirely here
+			];
 		}
 
 		// Check rate limits; we don't rate-limit pages in the Template or Module namespaces since
@@ -707,5 +754,35 @@ class Mirror {
 		}
 
 		return $topLevel ? $data : $data[$action];
+	}
+
+	private function getEnterpriseCache( PageIdentity $page ): ?EnterpriseCacheResponse {
+		$cacheDir = $this->options->get( 'WikiMirrorCacheDirectory' );
+		$remote = $this->options->get( 'WikiMirrorRemote' );
+
+		$pageName = $this->titleFormatter->getPrefixedText( $page );
+		$pageNamespace = $page->getNamespace();
+		$pageId = $page->getId();
+
+		if ( $cacheDir !== null ) {
+			$prefix = substr( sha1( $pageName ), 0, 2 );
+			$filename = "{$cacheDir}/{$remote}/{$pageNamespace}/{$prefix}/{$pageId}.json";
+			$json = @file_get_contents( $filename );
+			if ( $json !== false ) {
+				try {
+					$data = json_decode( $json, true, 8, JSON_THROW_ON_ERROR );
+					if ( is_array( $data ) ) {
+						return new EnterpriseCacheResponse( $data );
+					}
+				} catch ( JsonException $e ) {
+					// log the exception but don't let it abort the process
+					wfLogWarning( "Corrupted local JSON cache file located at {$filename}: {$e->getMessage()}" );
+				}
+			}
+		}
+
+		// If file doesn't exist or we can't load it properly for some reason,
+		// return null indicating a cache miss
+		return null;
 	}
 }
