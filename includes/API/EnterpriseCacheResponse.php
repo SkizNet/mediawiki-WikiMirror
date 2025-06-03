@@ -71,11 +71,11 @@ class EnterpriseCacheResponse {
 	// url has no current use and is not captured in this object
 
 	/**
-	 * @var string Edit summary for the most recent revision
+	 * @var ?string Edit summary for the most recent revision
 	 *
 	 * Derived from version.comment
 	 */
-	public string $revisionComment;
+	public ?string $revisionComment;
 
 	// version.editor has no current use and is not captured in this object
 
@@ -112,9 +112,13 @@ class EnterpriseCacheResponse {
 		$this->pageLanguage = $data['in_language']['identifier'];
 		$this->pageTitle = $data['name'];
 		$this->pageNamespace = $data['namespace']['identifier'];
-		$this->revisionComment = $data['version']['comment'];
 		$this->revisionId = $data['version']['identifier'];
-		$this->revisionSize = $data['version']['size'];
+		$this->revisionSize = $data['version']['size']['value'];
+
+		// comment may be undefined if it was hidden via revdelete
+		if ( isset( $data['version']['comment'] ) ) {
+			$this->revisionComment = $data['version']['comment'];
+		}
 
 		// for HTML, we need to transform the output slightly. WME API gives us a full HTML document
 		// we instead want a fragment where the outside node is a <div class="mw-parser-output">
