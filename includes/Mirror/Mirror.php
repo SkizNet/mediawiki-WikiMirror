@@ -602,6 +602,8 @@ class Mirror {
 		$cache = $this->getEnterpriseCache( $page );
 		if ( $cache !== null ) {
 			$pageLang = $this->languageFactory->getLanguage( $cache->pageLanguage );
+			$pageSha1 = sha1( $cache->pageText );
+
 			return [
 				'pageid' => $cache->pageId,
 				'ns' => $cache->pageNamespace,
@@ -618,8 +620,33 @@ class Mirror {
 				'redirect' => false,
 				// DISPLAYTITLE title isn't exposed as a separate thing, just use normal title for now
 				'displaytitle' => $cache->pageTitle,
-				// actual API also returns a revisions array, however we mark it as nullable
-				// we cannot provide all of the details needed for that so we omit it entirely here
+				'revisions' => [
+					[
+						'revid' => $cache->revisionId,
+						'parentid' => 0,
+						'minor' => false,
+						'user' => $cache->userName,
+						'userid' => $cache->userId,
+						'timestamp' => $cache->lastModified,
+						'size' => $cache->revisionSize,
+						'sha1' => $pageSha1,
+						'roles' => [ 'main' ],
+						'slots' => [
+							'main' => [
+								'size' => $cache->revisionSize,
+								'sha1' => $pageSha1,
+								'contentmodel' => 'wikitext',
+								'contentformat' => 'text/x-wiki',
+								'content' => $cache->pageText,
+							]
+						],
+						'comment' => $cache->revisionComment,
+						// parsed comment isn't available and it's way too heavyweight to invoke the parser here
+						// just give a comment instead and can re-visit if we really need this later
+						'parsedcomment' => '/* parsed comment not available */',
+						'tags' => $cache->revisionTags,
+					]
+				]
 			];
 		}
 

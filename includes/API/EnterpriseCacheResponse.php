@@ -71,13 +71,25 @@ class EnterpriseCacheResponse {
 	// url has no current use and is not captured in this object
 
 	/**
-	 * @var ?string Edit summary for the most recent revision
+	 * @var string|null Edit summary for the most recent revision
 	 *
 	 * Derived from version.comment
 	 */
 	public ?string $revisionComment;
 
-	// version.editor has no current use and is not captured in this object
+	/**
+	 * @var int|null Editor ID for the most recent revision
+	 *
+	 * Derived from version.editor.identifier
+	 */
+	public ?int $userId;
+
+	/**
+	 * @var string|null Editor name for the most recent revision
+	 *
+	 * Derived from version.editor.name
+	 */
+	public ?string $userName;
 
 	/**
 	 * @var int Revision ID for the most recent revision
@@ -97,7 +109,12 @@ class EnterpriseCacheResponse {
 	 */
 	public int $revisionSize;
 
-	// version.tags has no current use and is not captured in this object
+	/**
+	 * @var string[] Tags associated with the revision
+	 *
+	 * Derived from version.tags
+	 */
+	public array $revisionTags = [];
 
 	/**
 	 * Construct a new EnterpriseCacheResponse.
@@ -120,6 +137,20 @@ class EnterpriseCacheResponse {
 			$this->revisionComment = $data['version']['comment'];
 		}
 
+		// user info may be undefined if it was hidden via revdelete
+		if ( isset( $data['version']['editor']['identifier'] ) ) {
+			$this->userId = $data['version']['editor']['identifier'];
+		}
+
+		if ( isset( $data['version']['editor']['name'] ) ) {
+			$this->userName = $data['version']['editor']['name'];
+		}
+
+		// Tags is missing if there aren't any
+		if ( isset( $data['version']['tags'] ) ) {
+			$this->revisionTags = $data['version']['tags'];
+		}
+
 		// for HTML, we need to transform the output slightly. WME API gives us a full HTML document
 		// we instead want a fragment where the outside node is a <div class="mw-parser-output">
 		// WME HTML has mw-parser-output on the <body>
@@ -128,7 +159,7 @@ class EnterpriseCacheResponse {
 		// Then replace and truncate the ending
 		$this->pageHtml = preg_replace( '#</body></html>$#', '</div>', $this->pageHtml );
 
-		if ( $data['version']['unit_text'] !== 'B' ) {
+		if ( $data['version']['size']['unit_text'] !== 'B' ) {
 			wfWarn( "Data for page <{$this->pageTitle}> ({$this->pageId}) has a size in a unit other than bytes" );
 		}
 	}
