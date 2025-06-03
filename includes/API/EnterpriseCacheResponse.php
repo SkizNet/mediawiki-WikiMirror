@@ -75,21 +75,21 @@ class EnterpriseCacheResponse {
 	 *
 	 * Derived from version.comment
 	 */
-	public ?string $revisionComment;
+	public ?string $revisionComment = null;
 
 	/**
 	 * @var int|null Editor ID for the most recent revision
 	 *
 	 * Derived from version.editor.identifier
 	 */
-	public ?int $userId;
+	public ?int $userId = null;
 
 	/**
 	 * @var string|null Editor name for the most recent revision
 	 *
 	 * Derived from version.editor.name
 	 */
-	public ?string $userName;
+	public ?string $userName = null;
 
 	/**
 	 * @var int Revision ID for the most recent revision
