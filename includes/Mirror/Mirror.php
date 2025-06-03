@@ -758,7 +758,6 @@ class Mirror {
 
 	private function getEnterpriseCache( PageIdentity $page ): ?EnterpriseCacheResponse {
 		$cacheDir = $this->options->get( 'WikiMirrorCacheDirectory' );
-		$remote = $this->options->get( 'WikiMirrorRemote' );
 
 		$pageName = $this->titleFormatter->getPrefixedText( $page );
 		$pageNamespace = $page->getNamespace();
@@ -766,7 +765,7 @@ class Mirror {
 
 		if ( $cacheDir !== null ) {
 			$prefix = substr( sha1( $pageName ), 0, 2 );
-			$filename = "{$cacheDir}/{$remote}/{$pageNamespace}/{$prefix}/{$pageId}.json";
+			$filename = "{$cacheDir}/{$pageNamespace}/{$prefix}/{$pageId}.json";
 			// TOCTTOU race conditions prevent us from easily determining if file_get_contents would succeed
 			// Simply try it and let it fail (without raising warnings) if the file doesn't exist or we can't read it
 			// phpcs:ignore Generic.PHP.NoSilencedErrors.Discouraged
@@ -775,6 +774,7 @@ class Mirror {
 				try {
 					$data = json_decode( $json, true, 8, JSON_THROW_ON_ERROR );
 					if ( is_array( $data ) ) {
+						wfDebugLog( 'WikiMirror', "Loaded data for $pageName from WME cache." );
 						return new EnterpriseCacheResponse( $data );
 					}
 				} catch ( JsonException $e ) {
