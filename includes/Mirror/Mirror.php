@@ -170,6 +170,7 @@ class Mirror {
 
 		if ( !$value && !$live ) {
 			// invalid cached value; attempt re-fetch
+			wfDebugLog( 'WikiMirror', "Invalid cached value for {$pageName}; fetching live page." );
 			$value = $this->getLivePage( $page );
 		}
 
@@ -434,7 +435,7 @@ class Mirror {
 	 * @return LinkTarget|null Redirect target, or null if this Title is not a redirect.
 	 */
 	public function getRedirectTarget( Title $title ) {
-		if ( !$this->canMirror( $title ) ) {
+		if ( !$this->canMirror( $title, true ) ) {
 			// page is local, call WikiPage::getRedirectTarget if it exists
 			if ( !$title->exists() ) {
 				return null;
@@ -443,14 +444,8 @@ class Mirror {
 			return $this->redirectLookup->getRedirectTarget( $title );
 		}
 
-		$status = $this->getCachedPage( $title );
-		if ( !$status->isOK() ) {
-			return null;
-		}
-
-		/** @var PageInfoResponse $pageInfo */
-		$pageInfo = $status->getValue();
-		return $pageInfo->redirect;
+		$record = $this->getMirrorPageRecord( $title->getNamespace(), $title->getDBkey() );
+		return $record?->getRedirectTarget();
 	}
 
 	/**

@@ -66,6 +66,14 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 		return isset( $this->row->rr_from );
 	}
 
+	public function getRedirectTarget() {
+		if ( !$this->isRedirect() ) {
+			return null;
+		}
+
+		return Title::makeTitleSafe( $this->row->rr_namespace, $this->row->rr_title );
+	}
+
 	/**
 	 * @inheritDoc
 	 */

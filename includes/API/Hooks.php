@@ -166,7 +166,7 @@ class Hooks implements
 				}
 
 				$title = Title::makeTitleSafe( $page['ns'], $pageTitle );
-				if ( $title === null || !$this->mirror->canMirror( $title ) ) {
+				if ( $title === null || !$this->mirror->canMirror( $title, true ) ) {
 					continue;
 				}
 
