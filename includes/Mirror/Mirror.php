@@ -783,7 +783,27 @@ class Mirror {
 
 		$pageName = $this->titleFormatter->getPrefixedText( $page );
 		$pageNamespace = $page->getNamespace();
+
+		// The provided PageIdentity does not necessarily have the remote page ID defined
+		// Fetch it from the database if missing
 		$pageId = $page->getId();
+		if ( $pageId === 0 ) {
+			$dbr = $this->loadBalancer->getConnection( DB_REPLICA );
+			$pageId = $dbr->newSelectQueryBuilder()
+				->select( [ 'rp_id' ] )
+				->from( 'remote_page' )
+				->where( [
+					'rp_namespace' => $pageNamespace,
+					'rp_title' => $page->getDBkey()
+				] )
+				->fetchField();
+		}
+
+		// if it's still 0 (or false due to no row existing in remote_page), then abort
+		if ( !$pageId ) {
+			wfDebugLog( 'WikiMirror', "Could not find remote_page entry for $pageName." );
+			return null;
+		}
 
 		if ( $cacheDir !== null ) {
 			$prefix = substr( sha1( $pageName ), 0, 2 );
