@@ -803,6 +803,8 @@ class Mirror {
 					// log the exception but don't let it abort the process
 					wfLogWarning( "Corrupted local JSON cache file located at {$filename}: {$e->getMessage()}" );
 				}
+			} else {
+				wfDebugLog( 'WikiMirror', "$pageName not found in WME cache ({$filename})" );
 			}
 		}
 
