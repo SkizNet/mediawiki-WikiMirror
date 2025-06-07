@@ -191,8 +191,8 @@ class Hooks implements
 						'mirrored' => true,
 					],
 					'ids' => [
-						'revid' => 0,
-						'parentid' => 0
+						'revid' => $revInfo->revisionId,
+						'parentid' => $revInfo->parentId,
 					],
 					'flags' => [
 						'minor' => $revInfo->minor
@@ -204,7 +204,7 @@ class Hooks implements
 						'user' => $revInfo->user,
 					],
 					'userid' => [
-						'userid' => 0
+						'userid' => $revInfo->remoteUserId,
 					],
 					'size' => [
 						'size' => $revInfo->size
