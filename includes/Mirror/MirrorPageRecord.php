@@ -9,6 +9,7 @@ use MediaWiki\Utils\MWTimestamp;
 use ParserOutput;
 use RuntimeException;
 use stdClass;
+use Title;
 use Wikimedia\Assert\Assert;
 use WikiMirror\API\PageInfoResponse;
 
