@@ -57,7 +57,7 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 	 * @inheritDoc
 	 */
 	public function isNew() {
-		return (bool)$this->getPageInfo()->lastRevision?->parentId;
+		return (bool)$this->getPageInfo()?->lastRevision?->parentId;
 	}
 
 	/**
@@ -80,7 +80,7 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 	 */
 	public function getLatest( $wikiId = self::LOCAL ) {
 		$this->assertWiki( $wikiId );
-		return $this->getPageInfo()->lastRevisionId;
+		return $this->getPageInfo()?->lastRevisionId ?? 0;
 	}
 
 	/**
@@ -94,7 +94,7 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 	 * @inheritDoc
 	 */
 	public function getLanguage() {
-		return $this->getPageInfo()->pageLanguage;
+		return $this->getPageInfo()?->pageLanguage;
 	}
 
 	/**
@@ -110,7 +110,7 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 		return $handler->getParserOutput( $content, $cpoParams );
 	}
 
-	private function getPageInfo(): PageInfoResponse {
+	private function getPageInfo(): ?PageInfoResponse {
 		if ( $this->pageInfo !== null ) {
 			return $this->pageInfo;
 		}

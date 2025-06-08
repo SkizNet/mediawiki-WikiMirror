@@ -159,7 +159,7 @@ class Mirror {
 			function ( $oldValue, &$ttl, &$setOpts, $oldAsOf ) use ( $page, $pageName, &$live ) {
 				wfDebugLog( 'WikiMirror', "{$pageName}: Info not found in cache." );
 				$live = true;
-				return $this->getLivePage( $page ) ?? false;
+				return $this->getLivePage( $page );
 			},
 			[
 				'pcTTL' => $this->cache::TTL_PROC_LONG,
@@ -168,14 +168,20 @@ class Mirror {
 			]
 		);
 
-		if ( !$value && !$live ) {
+		if ( $value === false && !$live ) {
 			// invalid cached value; attempt re-fetch
 			wfDebugLog( 'WikiMirror', "Invalid cached value for {$pageName}; fetching live page." );
 			$value = $this->getLivePage( $page );
 		}
 
-		if ( !$value ) {
+		if ( $value === false ) {
 			return Status::newFatal( 'wikimirror-no-mirror', $pageName );
+		}
+
+		if ( $value === null ) {
+			$status = Status::newGood( $value );
+			$status->warning( 'wikimirror-no-mirror', $pageName );
+			return $status;
 		}
 
 		return Status::newGood( new PageInfoResponse( $this, $value ) );
@@ -210,7 +216,7 @@ class Mirror {
 
 		$pageInfo = $this->getCachedPage( $page );
 
-		if ( !$value || !$pageInfo->isOK() ) {
+		if ( !$value || !$pageInfo->isGood() ) {
 			return Status::newFatal( 'wikimirror-no-mirror', $pageName );
 		}
 
@@ -373,7 +379,7 @@ class Mirror {
 			$exists = $result !== null;
 			$this->titleCache[$cacheKey] = $exists ? 'fast_valid' : 'fast_errored';
 			return $exists;
-		} elseif ( !$this->getCachedPage( $page )->isOK() ) {
+		} elseif ( !$this->getCachedPage( $page )->isGood() ) {
 			// not able to successfully fetch the mirrored page
 			$this->titleCache[$cacheKey] = 'errored';
 			return false;
@@ -512,7 +518,7 @@ class Mirror {
 	 */
 	private function getLiveText( PageIdentity $page ) {
 		$status = $this->getCachedPage( $page );
-		if ( !$status->isOK() ) {
+		if ( !$status->isGood() ) {
 			return null;
 		}
 
@@ -675,8 +681,9 @@ class Mirror {
 
 		$data = $this->getRemoteApiResponse( $params, __METHOD__ );
 		if ( $data === false ) {
+			// this error is transient and should be re-tried
 			wfDebug( "{$pageName} could not be fetched from remote mirror." );
-			return null;
+			return false;
 		}
 
 		if ( isset( $data['interwiki'] ) ) {

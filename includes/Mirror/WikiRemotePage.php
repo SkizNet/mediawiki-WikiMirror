@@ -82,7 +82,7 @@ class WikiRemotePage extends WikiPage {
 		$mirror = MediaWikiServices::getInstance()->get( 'Mirror' );
 		$status = $mirror->getCachedPage( $this->mTitle );
 
-		if ( !$status->isOK() ) {
+		if ( !$status->isGood() ) {
 			$row = false;
 		} else {
 			/** @var PageInfoResponse $pageData */
@@ -117,8 +117,12 @@ class WikiRemotePage extends WikiPage {
 			throw new MWException( $status->getMessage() );
 		}
 
-		/** @var PageInfoResponse $revData */
+		/** @var ?PageInfoResponse $revData */
 		$revData = $status->getValue();
+		if ( $revData === null ) {
+			// page doesn't exist remotely, nothing to do here
+			return;
+		}
 
 		$revision = new RemoteRevisionRecord( $revData );
 		// Annoyingly setLastEdit is marked as private instead of protected in WikiPage.
@@ -134,10 +138,10 @@ class WikiRemotePage extends WikiPage {
 			throw new MWException( $status->getMessage() );
 		}
 
-		/** @var PageInfoResponse $pageData */
+		/** @var ?PageInfoResponse $pageData */
 		$pageData = $status->getValue();
 
-		return $pageData->redirect;
+		return $pageData?->redirect;
 	}
 
 	/** @inheritDoc */

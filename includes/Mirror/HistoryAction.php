@@ -21,8 +21,13 @@ class HistoryAction extends \HistoryAction {
 			throw new MWException( $status->getMessage() );
 		}
 
-		/** @var PageInfoResponse $pageInfo */
+		/** @var ?PageInfoResponse $pageInfo */
 		$pageInfo = $status->getValue();
+		if ( $pageInfo === null ) {
+			// page doesn't exist remotely, nothing to do here
+			return;
+		}
+
 		$url = wfAppendQuery( $pageInfo->getUrl(), [ 'action' => 'history' ] );
 
 		$out->wrapWikiMsg( '<div class="mw-parser-output">$1</div>',

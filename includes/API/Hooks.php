@@ -176,9 +176,9 @@ class Hooks implements
 					continue;
 				}
 
-				/** @var PageInfoResponse $pageInfo */
+				/** @var ?PageInfoResponse $pageInfo */
 				$pageInfo = $status->getValue();
-				$revInfo = $pageInfo->lastRevision;
+				$revInfo = $pageInfo?->lastRevision;
 				if ( $revInfo === null ) {
 					// page doesn't exist remotely
 					continue;
