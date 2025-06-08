@@ -8,6 +8,7 @@ use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
 use RuntimeException;
 use Title;
+use WikiMirror\API\PageInfoResponse;
 use WikiMirror\Mirror\LazyMirror;
 use WikiMirror\Mirror\RemoteRevisionRecord;
 
@@ -106,7 +107,13 @@ class RevisionLookupManipulator implements RevisionLookup {
 				throw new RuntimeException( (string)$status );
 			}
 
-			return new RemoteRevisionRecord( $status->getValue() );
+			/** @var ?PageInfoResponse $pageInfo */
+			$pageInfo = $status->getValue();
+			if ( $pageInfo === null ) {
+				return false;
+			}
+
+			return new RemoteRevisionRecord( $pageInfo );
 		}
 
 		return $this->revisionLookup->getKnownCurrentRevision( $page, $revId );
