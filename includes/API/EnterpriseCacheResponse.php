@@ -154,8 +154,8 @@ class EnterpriseCacheResponse {
 		// for HTML, we need to transform the output slightly. WME API gives us a full HTML document
 		// we instead want a fragment where the outside node is a <div class="mw-parser-output">
 		// WME HTML has mw-parser-output on the <body>
-		// First truncate everything up to the <body and replace with <div
-		$this->pageHtml = preg_replace( '/^.*?<body /s', '<div ', $this->pageHtml );
+		// First truncate everything up to and including the <body>
+		$this->pageHtml = preg_replace( '/^.*?<body .*?>/s', '<div class="mw-parser-output">', $this->pageHtml );
 		// Then replace and truncate the ending
 		$this->pageHtml = preg_replace( '#</body></html>$#', '</div>', $this->pageHtml );
 
