@@ -155,7 +155,7 @@ class EnterpriseCacheResponse {
 		// we instead want a fragment where the outside node is a <div class="mw-parser-output">
 		// WME HTML has mw-parser-output on the <body>
 		// First truncate everything up to the <body and replace with <div
-		$this->pageHtml = preg_replace( '/^.*?<body /', '<div ', $this->pageHtml );
+		$this->pageHtml = preg_replace( '/^.*?<body /s', '<div ', $this->pageHtml );
 		// Then replace and truncate the ending
 		$this->pageHtml = preg_replace( '#</body></html>$#', '</div>', $this->pageHtml );
 

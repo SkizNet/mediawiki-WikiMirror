@@ -87,7 +87,7 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 	 * @inheritDoc
 	 */
 	public function getTouched() {
-		return MWTimestamp::convert( TS_MW, $this->getPageInfo()->touched );
+		return MWTimestamp::convert( TS_MW, $this->getPageInfo()?->touched ?? '19700101000000' );
 	}
 
 	/**
