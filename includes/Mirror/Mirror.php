@@ -661,7 +661,7 @@ class Mirror {
 		}
 
 		$user = RequestContext::getMain()->getUser();
-		if ( !in_array( $page->getNamespace(), $excludedNs ) && $user->pingLimiter( 'mirror' ) ) {
+		if ( !wfIsCLI() && !in_array( $page->getNamespace(), $excludedNs ) && $user->pingLimiter( 'mirror' ) ) {
 			throw new ThrottledError();
 		}
 

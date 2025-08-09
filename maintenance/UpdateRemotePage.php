@@ -55,6 +55,8 @@ namespace WikiMirror\Maintenance {
 				false,
 				false
 			);
+
+			$this->setBatchSize( 500 );
 		}
 
 		/**
@@ -107,8 +109,64 @@ namespace WikiMirror\Maintenance {
 			}
 
 			if ( $finish ) {
+				$this->outputChanneled( 'Preparing temp tables...' );
+				$db->sourceFile( __DIR__ . '/sql/updateRemotePage-1.sql' );
+				$now = $db->addQuotes( wfTimestampNow() );
+
+				$this->outputChanneled( 'Copying page data...' );
+				$offset = 0;
+				do {
+					$this->outputChanneled( (string)$offset );
+					$db->insertSelect(
+						'remote_page2',
+						'wikimirror_page',
+						[
+							'rp_id' => 'page_id',
+							'rp_namespace' => 'page_namespace',
+							'rp_title' => 'page_title',
+							'rp_updated' => $now,
+						],
+						'',
+						__METHOD__,
+						[],
+						[
+							'ORDER BY' => 'page_id ASC',
+							'LIMIT' => $this->getBatchSize(),
+							'OFFSET' => $offset,
+						]
+					);
+
+					$offset += $this->getBatchSize();
+				} while ( $db->affectedRows() > 0 );
+
+				$this->outputChanneled( 'Copying redirect data...' );
+				$offset = 0;
+				do {
+					$this->outputChanneled( (string)$offset );
+					$db->insertSelect(
+						'remote_redirect2',
+						'wikimirror_redirect',
+						[
+							'rr_from' => 'rd_from',
+							'rr_namespace' => 'rd_namespace',
+							'rr_title' => 'rd_title',
+							'rr_updated' => $now,
+						],
+						'',
+						__METHOD__,
+						[],
+						[
+							'ORDER BY' => 'rd_from ASC',
+							'LIMIT' => $this->getBatchSize(),
+							'OFFSET' => $offset,
+						]
+					);
+
+					$offset += $this->getBatchSize();
+				} while ( $db->affectedRows() > 0 );
+
 				$this->outputChanneled( 'Finishing up...' );
-				$db->sourceFile( __DIR__ . '/sql/updateRemotePage.sql' );
+				$db->sourceFile( __DIR__ . '/sql/updateRemotePage-2.sql' );
 			}
 
 			$this->outputChanneled( 'Complete!' );
