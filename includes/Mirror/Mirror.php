@@ -31,6 +31,7 @@ class Mirror {
 		'Server',
 		'TranscludeCacheExpiry',
 		'WikiMirrorCacheDirectory',
+		'WikiMirrorExcludeNamespaces',
 		'WikiMirrorRemote',
 	];
 
@@ -266,12 +267,13 @@ class Mirror {
 	 */
 	private function isLegalTitleForMirroring( PageIdentity $page ) {
 		$title = Title::newFromPageIdentity( $page );
+		$invalidNamespaces = array_merge(
+			[ NS_MEDIAWIKI, NS_FILE, NS_PROJECT, NS_PROJECT_TALK ],
+			$this->options->get( 'WikiMirrorExcludeNamespaces' ) );
+
 		$illegal = $title->isExternal()
 			|| $title->getNamespace() < 0
-			|| $title->getNamespace() === NS_MEDIAWIKI
-			|| $title->getNamespace() === NS_FILE
-			|| $title->getNamespace() === NS_PROJECT
-			|| $title->getNamespace() === NS_PROJECT_TALK
+			|| in_array( $title->getNamespace(), $invalidNamespaces )
 			|| $title->isUserConfigPage();
 
 		return !$illegal;
@@ -803,6 +805,7 @@ class Mirror {
 					'rp_namespace' => $pageNamespace,
 					'rp_title' => $page->getDBkey()
 				] )
+				->caller( __METHOD__ )
 				->fetchField();
 		}
 
