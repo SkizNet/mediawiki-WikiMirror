@@ -43,24 +43,21 @@ class HtmlOutputRendererHelperManipulator extends HtmlOutputRendererHelper {
 	}
 
 	/**
-	 * 1.41/1.42 compatibility shim
+	 * Deprecated compatibility shim
 	 *
 	 * @param PageIdentity $page
 	 * @param array $parameters
 	 * @param Authority $authority
 	 * @param RevisionRecord|int|null $revision
-	 * @param Bcp47Code|null $pageLanguage
 	 * @return void
 	 */
 	public function init(
 		PageIdentity $page,
 		array $parameters,
 		Authority $authority,
-		$revision = null,
-		?Bcp47Code $pageLanguage = null
+		$revision = null
 	) {
-		// @phan-suppress-next-line PhanParamTooMany, PhanTypeMismatchArgumentSuperType
-		parent::init( $page, $parameters, $authority, $revision, $pageLanguage );
+		parent::init( $page, $parameters, $authority, $revision );
 
 		if ( $page instanceof MirrorPageRecord ) {
 			$parserOutputProperty = new ReflectionProperty( parent::class, 'parserOutput' );

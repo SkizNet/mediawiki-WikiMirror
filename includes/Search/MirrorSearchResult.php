@@ -2,8 +2,8 @@
 
 namespace WikiMirror\Search;
 
+use MediaWiki\Title\Title;
 use RevisionSearchResult;
-use Title;
 
 class MirrorSearchResult extends RevisionSearchResult {
 	/** @var string */

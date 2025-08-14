@@ -2,8 +2,8 @@
 
 namespace WikiMirror\API;
 
+use MediaWiki\Title\Title;
 use MWException;
-use Title;
 use WikiMirror\Mirror\Mirror;
 
 /**

@@ -7,6 +7,7 @@ namespace WikiMirror\Mirror;
 
 use DeviceDetector\Parser\Bot as BotParser;
 use HtmlArmor;
+use MediaWiki\Context\RequestContext;
 use MediaWiki\Hook\BeforePageDisplayHook;
 use MediaWiki\Hook\SkinTemplateNavigation__UniversalHook;
 use MediaWiki\Hook\TitleIsAlwaysKnownHook;
@@ -18,14 +19,13 @@ use MediaWiki\Page\Hook\WikiPageFactoryHook;
 use MediaWiki\Permissions\Hook\GetUserPermissionsErrorsExpensiveHook;
 use MediaWiki\Permissions\Hook\GetUserPermissionsErrorsHook;
 use MediaWiki\Permissions\PermissionManager;
-use MessageSpecifier;
+use MediaWiki\SpecialPage\SpecialPage;
+use MediaWiki\Title\Title;
+use MediaWiki\User\User;
 use OOUI\ButtonWidget;
-use RequestContext;
 use Skin;
 use SkinTemplate;
-use SpecialPage;
-use Title;
-use User;
+use Wikimedia\Message\MessageSpecifier;
 use WikiPage;
 
 class Hooks implements

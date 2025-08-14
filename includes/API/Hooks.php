@@ -5,24 +5,22 @@
 
 namespace WikiMirror\API;
 
-use ApiBase;
-use ApiModuleManager;
-use ApiQuery;
-use ApiQueryBacklinksprop;
-use ApiQueryRevisions;
-use ApiUsageException;
-use ExtensionRegistry;
-use IApiMessage;
+use MediaWiki\Api\ApiBase;
+use MediaWiki\Api\ApiModuleManager;
+use MediaWiki\Api\ApiQuery;
+use MediaWiki\Api\ApiQueryBacklinksprop;
+use MediaWiki\Api\ApiQueryRevisions;
 use MediaWiki\Api\Hook\ApiCheckCanExecuteHook;
 use MediaWiki\Api\Hook\APIGetAllowedParamsHook;
 use MediaWiki\Api\Hook\ApiMain__moduleManagerHook;
 use MediaWiki\Api\Hook\ApiMakeParserOptionsHook;
 use MediaWiki\Api\Hook\APIQueryAfterExecuteHook;
-use Message;
-use MWException;
-use ParserOptions;
-use Title;
-use User;
+use MediaWiki\Api\IApiMessage;
+use MediaWiki\Message\Message;
+use MediaWiki\Parser\ParserOptions;
+use MediaWiki\Registration\ExtensionRegistry;
+use MediaWiki\Title\Title;
+use MediaWiki\User\User;
 use Wikimedia\ParamValidator\ParamValidator;
 use Wikimedia\Rdbms\IDatabase;
 use Wikimedia\Rdbms\ILoadBalancer;
@@ -38,10 +36,10 @@ class Hooks implements
 	APIQueryAfterExecuteHook
 {
 	/** @var ILoadBalancer */
-	private $loadBalancer;
+	private ILoadBalancer $loadBalancer;
 
 	/** @var Mirror */
-	private $mirror;
+	private Mirror $mirror;
 
 	/**
 	 * Constructor for API hooks.
@@ -65,7 +63,6 @@ class Hooks implements
 	 *  ApiMessage, Message, string message key, or key+parameters array to
 	 *  pass to ApiBase::dieWithError().
 	 * @return void To continue hook execution
-	 * @throws MWException On error
 	 */
 	public function onApiCheckCanExecute( $module, $user, &$message ) {
 		if ( $module instanceof ApiQuery ) {
@@ -133,7 +130,6 @@ class Hooks implements
 	 *
 	 * @param ApiBase $module
 	 * @return void
-	 * @throws ApiUsageException
 	 */
 	public function onAPIQueryAfterExecute( $module ) {
 		if ( $module instanceof ApiQueryRevisions ) {
@@ -147,7 +143,6 @@ class Hooks implements
 	 * Add information about mirrored revisions to action=query&prop=revisions.
 	 *
 	 * @param ApiQueryRevisions $module
-	 * @throws ApiUsageException
 	 */
 	private function addMirroredRevisionInfo( ApiQueryRevisions $module ) {
 		$result = $module->getResult();
@@ -293,7 +288,6 @@ class Hooks implements
 	 * Add information about mirrored redirects to action=query&prop=redirects.
 	 *
 	 * @param ApiQueryBacklinksprop $module
-	 * @throws ApiUsageException On an invalid mirrorcontinue param
 	 */
 	private function addMirroredRedirectInfo( ApiQueryBacklinksprop $module ) {
 		$params = $module->extractRequestParams();

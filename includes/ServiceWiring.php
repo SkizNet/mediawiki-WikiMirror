@@ -17,8 +17,10 @@ return [
 			$services->getDBLoadBalancer(),
 			$services->getRedirectLookup(),
 			$services->getGlobalIdGenerator(),
+			$services->getFormatterFactory(),
 			$services->getLanguageFactory(),
 			$services->getTitleFormatter(),
+			$services->getUrlUtils(),
 			new ServiceOptions(
 				Mirror::CONSTRUCTOR_OPTIONS,
 				$services->getMainConfig()

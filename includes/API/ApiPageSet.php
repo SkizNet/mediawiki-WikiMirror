@@ -4,8 +4,7 @@ namespace WikiMirror\API;
 
 use ApiBase;
 use ApiUsageException;
-use MWException;
-use Title;
+use MediaWiki\Title\Title;
 use WikiMirror\Compat\ReflectionHelper;
 use WikiMirror\Mirror\Mirror;
 
@@ -36,7 +35,6 @@ class ApiPageSet extends \ApiPageSet {
 	 * redirects so that we don't try to add them to the database.
 	 *
 	 * @return void
-	 * @throws MWException On MW compatibility error
 	 */
 	public function execute() {
 		$redirects = [];
@@ -90,7 +88,6 @@ class ApiPageSet extends \ApiPageSet {
 	 * whether or not they are redirects. If they are, fully resolve them.
 	 *
 	 * @return array all resolved redirects
-	 * @throws MWException On MW compatibility error
 	 */
 	private function resolveMirroredRedirects() {
 		$redirects = [];

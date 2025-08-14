@@ -18,7 +18,6 @@ class ReflectionHelper {
 	public static function callPrivateMethod( string $class, string $method, ?object $object, array $args = [] ) {
 		$reflection = new ReflectionClass( $class );
 		$method = $reflection->getMethod( $method );
-		$method->setAccessible( true );
 		return $method->invokeArgs( $object, $args );
 	}
 
@@ -34,7 +33,6 @@ class ReflectionHelper {
 	public static function getPrivateProperty( string $class, string $property, ?object $object ) {
 		$reflection = new ReflectionClass( $class );
 		$property = $reflection->getProperty( $property );
-		$property->setAccessible( true );
 		return $property->getValue( $object );
 	}
 
@@ -50,7 +48,6 @@ class ReflectionHelper {
 	public static function setPrivateProperty( string $class, string $property, ?object $object, $value ) {
 		$reflection = new ReflectionClass( $class );
 		$property = $reflection->getProperty( $property );
-		$property->setAccessible( true );
 		$property->setValue( $object, $value );
 	}
 }

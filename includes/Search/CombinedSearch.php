@@ -18,7 +18,7 @@ class CombinedSearch extends SearchEngine implements PaginatingSearchEngine {
 	private array $engines;
 
 	public function __construct() {
-		// As of 1.41, the ObjectFactory spec for search engines doesn't support service injection
+		// As of 1.43, the ObjectFactory spec for search engines doesn't support service injection
 		$config = MediaWikiServices::getInstance()->getSearchEngineConfig();
 		$factory = MediaWikiServices::getInstance()->getSearchEngineFactory();
 

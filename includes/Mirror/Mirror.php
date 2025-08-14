@@ -4,18 +4,21 @@ namespace WikiMirror\Mirror;
 
 use JsonException;
 use MediaWiki\Config\ServiceOptions;
+use MediaWiki\Context\RequestContext;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Interwiki\InterwikiLookup;
+use MediaWiki\Language\FormatterFactory;
 use MediaWiki\Languages\LanguageFactory;
 use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Page\PageIdentity;
 use MediaWiki\Page\RedirectLookup;
+use MediaWiki\Status\Status;
+use MediaWiki\Status\StatusFormatter;
+use MediaWiki\Title\Title;
 use MediaWiki\Title\TitleFormatter;
-use RequestContext;
-use Status;
+use MediaWiki\Utils\UrlUtils;
 use ThrottledError;
-use Title;
-use WANObjectCache;
+use Wikimedia\ObjectCache\WANObjectCache;
 use Wikimedia\Rdbms\ILoadBalancer;
 use Wikimedia\UUID\GlobalIdGenerator;
 use WikiMirror\API\EnterpriseCacheResponse;
@@ -65,7 +68,17 @@ class Mirror {
 	/** @var LanguageFactory */
 	protected LanguageFactory $languageFactory;
 
+	/** @var FormatterFactory */
+	protected FormatterFactory $formatterFactory;
+
+	/** @var StatusFormatter|null */
+	private ?StatusFormatter $statusFormatter = null;
+
+	/** @var TitleFormatter */
 	protected TitleFormatter $titleFormatter;
+
+	/** @var UrlUtils */
+	protected UrlUtils $urlUtils;
 
 	/** @var array<string, string> */
 	private array $titleCache = [];
@@ -85,7 +98,9 @@ class Mirror {
 	 * @param RedirectLookup $redirectLookup
 	 * @param GlobalIdGenerator $globalIdGenerator
 	 * @param LanguageFactory $languageFactory
+	 * @param FormatterFactory $formatterFactory
 	 * @param TitleFormatter $titleFormatter
+	 * @param UrlUtils $urlUtils
 	 * @param ServiceOptions $options
 	 */
 	public function __construct(
@@ -95,8 +110,10 @@ class Mirror {
 		ILoadBalancer $loadBalancer,
 		RedirectLookup $redirectLookup,
 		GlobalIdGenerator $globalIdGenerator,
+		FormatterFactory $formatterFactory,
 		LanguageFactory $languageFactory,
 		TitleFormatter $titleFormatter,
+		UrlUtils $urlUtils,
 		ServiceOptions $options
 	) {
 		$options->assertRequiredOptions( self::CONSTRUCTOR_OPTIONS );
@@ -107,8 +124,23 @@ class Mirror {
 		$this->redirectLookup = $redirectLookup;
 		$this->globalIdGenerator = $globalIdGenerator;
 		$this->languageFactory = $languageFactory;
+		$this->formatterFactory = $formatterFactory;
 		$this->titleFormatter = $titleFormatter;
+		$this->urlUtils = $urlUtils;
 		$this->options = $options;
+	}
+
+	/**
+	 * Retrieve a StatusFormatter instance using the current request context
+	 *
+	 * @return StatusFormatter
+	 */
+	protected function getStatusFormatter(): StatusFormatter {
+		if ( $this->statusFormatter === null ) {
+			$this->statusFormatter = $this->formatterFactory->getStatusFormatter( RequestContext::getMain() );
+		}
+
+		return $this->statusFormatter;
 	}
 
 	/**
@@ -226,7 +258,8 @@ class Mirror {
 			$value,
 			$pageInfo->getValue(),
 			$this->globalIdGenerator,
-			$this->languageFactory
+			$this->languageFactory,
+			$this->urlUtils
 		) );
 	}
 
@@ -325,7 +358,7 @@ class Mirror {
 			return null;
 		}
 
-		$record = new MirrorPageRecord( $row, $this );
+		$record = new MirrorPageRecord( $row, $this, $this->getStatusFormatter() );
 		$this->pageRecordCache[$cacheKey] = $record;
 		return $record;
 	}

@@ -2,14 +2,14 @@
 
 namespace WikiMirror\Fork;
 
-use CommentStore;
 use ErrorPageError;
-use Html;
 use ManualLogEntry;
+use MediaWiki\CommentStore\CommentStore;
+use MediaWiki\Html\Html;
 use MediaWiki\Session\CsrfTokenSet;
+use MediaWiki\SpecialPage\UnlistedSpecialPage;
+use MediaWiki\Title\Title;
 use OOUI;
-use Title;
-use UnlistedSpecialPage;
 use Wikimedia\Rdbms\ILoadBalancer;
 use WikiMirror\Mirror\Mirror;
 
@@ -122,8 +122,6 @@ class SpecialMirror extends UnlistedSpecialPage {
 	/**
 	 * Display the form describing how forking works plus a button to let the user
 	 * confirm the fork action.
-	 *
-	 * @throws OOUI\Exception
 	 */
 	protected function showForm() {
 		$out = $this->getOutput();

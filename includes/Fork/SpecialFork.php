@@ -2,23 +2,20 @@
 
 namespace WikiMirror\Fork;
 
-use CommentStore;
-use ContentHandler;
 use ErrorPageError;
-use Exception;
-use ExternalUserNames;
-use Html;
 use ManualLogEntry;
+use MediaWiki\CommentStore\CommentStore;
+use MediaWiki\Content\ContentHandler;
+use MediaWiki\Html\Html;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\SlotRecord;
 use MediaWiki\Session\CsrfTokenSet;
+use MediaWiki\SpecialPage\UnlistedSpecialPage;
+use MediaWiki\Title\Title;
+use MediaWiki\User\ExternalUserNames;
 use MediaWiki\User\UserOptionsLookup;
-use MWException;
 use OldRevisionImporter;
 use OOUI;
-use ReadOnlyError;
-use Title;
-use UnlistedSpecialPage;
 use Wikimedia\Rdbms\ILoadBalancer;
 use WikiMirror\API\PageInfoResponse;
 use WikiMirror\API\ParseResponse;
@@ -75,10 +72,6 @@ class SpecialFork extends UnlistedSpecialPage {
 	 * Display the form or perform the fork.
 	 *
 	 * @param string|null $subPage Title being forked
-	 * @throws ReadOnlyError If wiki is read only
-	 * @throws ErrorPageError If given title cannot be forked for any reason
-	 * @throws MWException On internal error
-	 * @throws OOUI\Exception If a programming error occurs
 	 */
 	public function execute( $subPage ) {
 		// do permission checks, etc.
@@ -143,10 +136,6 @@ class SpecialFork extends UnlistedSpecialPage {
 	 * Perform the fork, bringing the most recent revision of the page
 	 * over immediately and enqueueing jobs to transfer the rest of the history.
 	 * Templates are not forked and will continue to use the mirrored version.
-	 *
-	 * @throws ErrorPageError On fork error
-	 * @throws MWException On internal error
-	 * @throws Exception When failing to publish log entries
 	 */
 	protected function doFork() {
 		$dbw = $this->loadBalancer->getConnection( DB_PRIMARY );
@@ -245,8 +234,6 @@ class SpecialFork extends UnlistedSpecialPage {
 	/**
 	 * Display the form describing how forking works plus a button to let the user
 	 * confirm the fork action.
-	 *
-	 * @throws OOUI\Exception
 	 */
 	protected function showForm() {
 		$out = $this->getOutput();

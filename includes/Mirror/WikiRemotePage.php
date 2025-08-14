@@ -2,11 +2,11 @@
 
 namespace WikiMirror\Mirror;
 
-use IDBAccessObject;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\ExistingPageRecord;
 use MediaWiki\Page\PageIdentity;
 use MWException;
+use Wikimedia\Rdbms\IDBAccessObject;
 use WikiMirror\API\PageInfoResponse;
 use WikiMirror\Compat\ReflectionHelper;
 use WikiPage;

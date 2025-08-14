@@ -2,10 +2,10 @@
 
 namespace WikiMirror\Mirror;
 
-use Content;
+use MediaWiki\Content\Content;
 use MediaWiki\Content\Renderer\ContentParseParams;
-use ParserOutput;
-use TextContentHandler;
+use MediaWiki\Content\TextContentHandler;
+use MediaWiki\Parser\ParserOutput;
 
 class MirrorContentHandler extends TextContentHandler {
 	/**

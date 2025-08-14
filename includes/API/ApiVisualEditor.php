@@ -12,16 +12,16 @@ use MediaWiki\Extension\VisualEditor\VisualEditorParsoidClientFactory;
 use MediaWiki\Page\WikiPageFactory;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\SpecialPage\SpecialPageFactory;
+use MediaWiki\Title\Title;
 use MediaWiki\User\TempUser\TempUserCreator;
 use MediaWiki\User\UserFactory;
 use MediaWiki\User\UserOptionsLookup;
 use MediaWiki\Watchlist\WatchlistManager;
-use Title;
 use WikiMirror\Mirror\Mirror;
 
 class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor {
 	/** @var Mirror */
-	private $mirror;
+	private Mirror $mirror;
 
 	/**
 	 * @param ApiMain $main

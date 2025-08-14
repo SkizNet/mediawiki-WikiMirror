@@ -3,13 +3,15 @@
 namespace WikiMirror\Mirror;
 
 use MediaWiki\Content\Renderer\ContentParseParams;
+use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Page\ExistingPageRecord;
 use MediaWiki\Page\PageIdentityValue;
+use MediaWiki\Parser\ParserOutput;
+use MediaWiki\Status\StatusFormatter;
+use MediaWiki\Title\Title;
 use MediaWiki\Utils\MWTimestamp;
-use ParserOutput;
 use RuntimeException;
 use stdClass;
-use Title;
 use Wikimedia\Assert\Assert;
 use WikiMirror\API\PageInfoResponse;
 
@@ -30,6 +32,9 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 	/** @var Mirror */
 	private Mirror $mirror;
 
+	/** @var StatusFormatter */
+	private StatusFormatter $formatter;
+
 	/** @var PageInfoResponse|null */
 	private ?PageInfoResponse $pageInfo = null;
 
@@ -38,8 +43,9 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 	 *
 	 * @param stdClass $row Row from database
 	 * @param Mirror $mirror
+	 * @param StatusFormatter $formatter
 	 */
-	public function __construct( stdClass $row, Mirror $mirror ) {
+	public function __construct( stdClass $row, Mirror $mirror, StatusFormatter $formatter ) {
 		foreach ( self::REQUIRED_FIELDS as $field ) {
 			Assert::parameter( isset( $row->$field ), '$row->' . $field, 'is required' );
 		}
@@ -51,13 +57,14 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 
 		$this->row = $row;
 		$this->mirror = $mirror;
+		$this->formatter = $formatter;
 	}
 
 	/**
 	 * @inheritDoc
 	 */
 	public function isNew() {
-		return (bool)$this->getPageInfo()?->lastRevision?->parentId;
+		return (bool)$this->getPageInfo()->lastRevision?->parentId;
 	}
 
 	/**
@@ -67,6 +74,11 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 		return isset( $this->row->rr_from );
 	}
 
+	/**
+	 * If this page is a mirrored redirect, get the target of the redirect.
+	 *
+	 * @return LinkTarget|null Redirect target, or null if this page isn't a mirrored redirect.
+	 */
 	public function getRedirectTarget() {
 		if ( !$this->isRedirect() ) {
 			return null;
@@ -80,21 +92,21 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 	 */
 	public function getLatest( $wikiId = self::LOCAL ) {
 		$this->assertWiki( $wikiId );
-		return $this->getPageInfo()?->lastRevisionId ?? 0;
+		return $this->getPageInfo()->lastRevisionId ?? 0;
 	}
 
 	/**
 	 * @inheritDoc
 	 */
 	public function getTouched() {
-		return MWTimestamp::convert( TS_MW, $this->getPageInfo()?->touched ?? '19700101000000' );
+		return MWTimestamp::convert( TS_MW, $this->getPageInfo()->touched ?? '19700101000000' );
 	}
 
 	/**
 	 * @inheritDoc
 	 */
 	public function getLanguage() {
-		return $this->getPageInfo()?->pageLanguage;
+		return $this->getPageInfo()->pageLanguage;
 	}
 
 	/**
@@ -110,18 +122,18 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 		return $handler->getParserOutput( $content, $cpoParams );
 	}
 
-	private function getPageInfo(): ?PageInfoResponse {
+	private function getPageInfo(): PageInfoResponse {
 		if ( $this->pageInfo !== null ) {
 			return $this->pageInfo;
 		}
 
 		$status = $this->mirror->getCachedPage( $this );
-		if ( $status->isOK() ) {
+		if ( $status->isGood() ) {
 			$this->pageInfo = $status->getValue();
+			Assert::postcondition( $this->pageInfo !== null, 'We should have a PageInfoResponse' );
 			return $this->pageInfo;
 		}
 
-		// 1.41 compat; use StatusFormatter once we only support 1.42+
-		throw new RuntimeException( $status->getMessage() );
+		throw new RuntimeException( $this->formatter->getMessage( $status ) );
 	}
 }

@@ -2,10 +2,10 @@
 
 namespace WikiMirror\Service;
 
+use MediaWiki\Parser\ParserOptions;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Rest\Handler\Helper\HtmlOutputRendererHelper;
 use MediaWiki\Rest\Handler\Helper\PageRestHelperFactory;
-use ParserOptions;
 use ReflectionClass;
 
 class PageRestHelperFactoryManipulator extends PageRestHelperFactory {
@@ -27,22 +27,14 @@ class PageRestHelperFactoryManipulator extends PageRestHelperFactory {
 		bool $lenientRevHandling = false,
 		?ParserOptions $parserOptions = null
 	): HtmlOutputRendererHelper {
-		// in 1.41 and 1.42 this only takes one arg: $lenientRevHandling,
-		// however that'd be passed to us as $page
-		if ( version_compare( MW_VERSION, '1.43', '<' ) ) {
-			// @phan-suppress-next-line PhanParamTooFew
-			$helper = parent::newHtmlOutputRendererHelper( (bool)$page );
-		} else {
-			// @phan-suppress-next-line PhanParamTooMany
-			$helper = parent::newHtmlOutputRendererHelper(
-				$page,
-				$parameters,
-				$authority,
-				$revision,
-				$lenientRevHandling,
-				$parserOptions
-			);
-		}
+		$helper = parent::newHtmlOutputRendererHelper(
+			$page,
+			$parameters,
+			$authority,
+			$revision,
+			$lenientRevHandling,
+			$parserOptions
+		);
 
 		return new HtmlOutputRendererHelperManipulator( $helper );
 	}

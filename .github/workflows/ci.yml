@@ -19,7 +19,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest ]
         php: [ '8.1' ]
-        mediawiki: [ REL1_41, REL1_43, master ]
+        mediawiki: [ REL1_43, master ]
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -62,7 +62,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest ]
         php: [ '8.1' ]
-        mediawiki: [ REL1_41, REL1_43, master ]
+        mediawiki: [ REL1_43, master ]
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2

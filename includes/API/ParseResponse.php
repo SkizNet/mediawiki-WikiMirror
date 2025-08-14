@@ -3,8 +3,9 @@
 namespace WikiMirror\API;
 
 use MediaWiki\Languages\LanguageFactory;
-use ParserOutput;
-use Title;
+use MediaWiki\Parser\ParserOutput;
+use MediaWiki\Title\Title;
+use MediaWiki\Utils\UrlUtils;
 use Wikimedia\UUID\GlobalIdGenerator;
 use WikiMirror\Mirror\Mirror;
 
@@ -57,6 +58,9 @@ class ParseResponse {
 	/** @var LanguageFactory */
 	private LanguageFactory $languageFactory;
 
+	/** @var UrlUtils */
+	private UrlUtils $urlUtils;
+
 	/**
 	 * ParseResponse constructor.
 	 *
@@ -65,17 +69,20 @@ class ParseResponse {
 	 * @param PageInfoResponse $pageInfo Page info corresponding to parsed text
 	 * @param GlobalIdGenerator $globalIdGenerator Global ID generator service
 	 * @param LanguageFactory $languageFactory Language factory service
+	 * @param UrlUtils $urlUtils URL utils service
 	 */
 	public function __construct(
 		Mirror $mirror,
 		array $response,
 		PageInfoResponse $pageInfo,
 		GlobalIdGenerator $globalIdGenerator,
-		LanguageFactory $languageFactory
+		LanguageFactory $languageFactory,
+		UrlUtils $urlUtils
 	) {
 		$this->mirror = $mirror;
 		$this->globalIdGenerator = $globalIdGenerator;
 		$this->languageFactory = $languageFactory;
+		$this->urlUtils = $urlUtils;
 
 		$this->pageInfo = $pageInfo;
 		$this->title = $response['title'];
@@ -121,9 +128,9 @@ class ParseResponse {
 		$output->setHideNewSection( true );
 
 		if ( $this->pageInfo->lastRevisionId ) {
-			$output->setTimestamp( wfTimestamp( TS_MW, $this->pageInfo->lastRevision->timestamp ) );
+			$output->setRevisionTimestamp( wfTimestamp( TS_MW, $this->pageInfo->lastRevision->timestamp ) );
 		} else {
-			$output->setTimestamp( wfTimestamp( TS_MW ) );
+			$output->setRevisionTimestamp( wfTimestamp( TS_MW ) );
 		}
 
 		$revId = $this->pageInfo->lastRevisionId;
@@ -131,15 +138,7 @@ class ParseResponse {
 		$output->setLanguage( $this->languageFactory->getLanguage( $this->pageInfo->pageLanguage ) );
 		$output->setCacheRevisionId( $revId );
 		$output->setCacheTime( $this->pageInfo->touched );
-
-		if ( method_exists( $output, 'setRenderId' ) ) {
-			// 1.42+
-			// @phan-suppress-next-line PhanUndeclaredMethod
-			$output->setRenderId( "{$revId}/{$uniqueId}" );
-		} else {
-			// 1.41 compat
-			$output->setExtensionData( 'parsoid-render-id', "{$revId}/{$uniqueId}" );
-		}
+		$output->setRenderId( "{$revId}/{$uniqueId}" );
 
 		return $output;
 	}
@@ -150,7 +149,7 @@ class ParseResponse {
 	 * @param string $html
 	 * @return string
 	 */
-	private function fixLocalLinks( $html ) {
+	private function fixLocalLinks( string $html ) {
 		$status = $this->mirror->getCachedSiteInfo();
 		if ( !$status->isOK() ) {
 			return $html;
@@ -162,7 +161,7 @@ class ParseResponse {
 		// remap remote article path to local article path
 		// we support remote $wgMainPageIsDomainRoot but do not support remote $wgActionPaths or $wgVariantArticlePath
 		// (local versions of the above are all supported as we go through Title to generate the new URL)
-		$remotePathInfo = wfParseUrl( $siteInfo->server . $siteInfo->articlePath );
+		$remotePathInfo = $this->urlUtils->parse( $siteInfo->server . $siteInfo->articlePath );
 		$inPath = isset( $remotePathInfo['path'] ) && str_contains( $remotePathInfo['path'], '$1' );
 		$queryKey = null;
 		if ( !$inPath && isset( $remotePathInfo['query'] ) ) {
@@ -184,7 +183,7 @@ class ParseResponse {
 		$regex = preg_quote( $siteInfo->articlePath, '#' );
 		$regex = '#<a href="(' . str_replace( '\\$1', $titleMatch, $regex ) . '[^"]*?)"#';
 		return preg_replace_callback( $regex, static function ( array $matches ) use ( $siteInfo, $queryKey ) {
-			$url = wfParseUrl( $siteInfo->server . html_entity_decode( $matches[1] ) );
+			$url = $this->urlUtils->parse( $siteInfo->server . html_entity_decode( $matches[1] ) );
 			if ( $url === false ) {
 				return $matches[0];
 			}

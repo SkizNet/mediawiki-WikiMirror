@@ -2,7 +2,7 @@
 
 namespace WikiMirror\Mirror;
 
-use Content;
+use MediaWiki\Content\Content;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Revision\RevisionSlots;
 use MediaWiki\Revision\SlotRecord;

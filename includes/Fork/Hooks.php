@@ -12,7 +12,6 @@ use MediaWiki\Hook\PageMoveCompletingHook;
 use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\User\UserIdentity;
-use MWException;
 use NaiveForeignTitleFactory;
 use NamespaceAwareForeignTitleFactory;
 use WikiImporter;
@@ -46,7 +45,6 @@ class Hooks implements
 	 *
 	 * @param WikiImporter $reader
 	 * @param array &$pageInfo
-	 * @throws MWException on error
 	 */
 	public function onImportHandlePageXMLTag( $reader, &$pageInfo ) {
 		static $cache = [];

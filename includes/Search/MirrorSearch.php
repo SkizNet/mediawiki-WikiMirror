@@ -18,7 +18,7 @@ class MirrorSearch extends SearchEngine implements PaginatingSearchEngine {
 	private int $maxResults;
 
 	public function __construct() {
-		// As of 1.41, the ObjectFactory spec for search engines doesn't support service injection
+		// As of 1.43, the ObjectFactory spec for search engines doesn't support service injection
 		$this->mirror = MediaWikiServices::getInstance()->getService( 'Mirror' );
 		$this->maxResults = MediaWikiServices::getInstance()->getMainConfig()->get( 'WikiMirrorSearchMaxResults' );
 	}
