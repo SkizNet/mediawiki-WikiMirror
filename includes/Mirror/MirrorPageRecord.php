@@ -92,14 +92,14 @@ class MirrorPageRecord extends PageIdentityValue implements ExistingPageRecord {
 	 */
 	public function getLatest( $wikiId = self::LOCAL ) {
 		$this->assertWiki( $wikiId );
-		return $this->getPageInfo()->lastRevisionId ?? 0;
+		return $this->getPageInfo()->lastRevisionId;
 	}
 
 	/**
 	 * @inheritDoc
 	 */
 	public function getTouched() {
-		return MWTimestamp::convert( TS_MW, $this->getPageInfo()->touched ?? '19700101000000' );
+		return MWTimestamp::convert( TS_MW, $this->getPageInfo()->touched );
 	}
 
 	/**

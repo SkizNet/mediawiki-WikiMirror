@@ -27,6 +27,8 @@ class PageRestHelperFactoryManipulator extends PageRestHelperFactory {
 		bool $lenientRevHandling = false,
 		?ParserOptions $parserOptions = null
 	): HtmlOutputRendererHelper {
+		// 1.43 only takes 5 args, 1.44+ takes 6
+		// @phan-suppress-next-line PhanParamTooMany
 		$helper = parent::newHtmlOutputRendererHelper(
 			$page,
 			$parameters,

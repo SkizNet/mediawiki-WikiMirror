@@ -182,8 +182,9 @@ class ParseResponse {
 
 		$regex = preg_quote( $siteInfo->articlePath, '#' );
 		$regex = '#<a href="(' . str_replace( '\\$1', $titleMatch, $regex ) . '[^"]*?)"#';
-		return preg_replace_callback( $regex, static function ( array $matches ) use ( $siteInfo, $queryKey ) {
-			$url = $this->urlUtils->parse( $siteInfo->server . html_entity_decode( $matches[1] ) );
+		$urlUtils = $this->urlUtils;
+		return preg_replace_callback( $regex, static function ( array $matches ) use ( $siteInfo, $queryKey, $urlUtils ) {
+			$url = $urlUtils->parse( $siteInfo->server . html_entity_decode( $matches[1] ) );
 			if ( $url === false ) {
 				return $matches[0];
 			}

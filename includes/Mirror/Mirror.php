@@ -97,8 +97,8 @@ class Mirror {
 	 * @param ILoadBalancer $loadBalancer
 	 * @param RedirectLookup $redirectLookup
 	 * @param GlobalIdGenerator $globalIdGenerator
-	 * @param LanguageFactory $languageFactory
 	 * @param FormatterFactory $formatterFactory
+	 * @param LanguageFactory $languageFactory
 	 * @param TitleFormatter $titleFormatter
 	 * @param UrlUtils $urlUtils
 	 * @param ServiceOptions $options
