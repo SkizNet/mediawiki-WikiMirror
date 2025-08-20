@@ -50,6 +50,7 @@ class ApiVisualEditor extends \MediaWiki\Extension\VisualEditor\ApiVisualEditor 
 		UserOptionsLookup $userOptionsLookup,
 		WatchlistManager $watchlistManager,
 		ContentTransformer $contentTransformer,
+		// 1.43 compat: In 1.44 this parameter changed types
 		IBufferingStatsdDataFactory $statsdDataFactory,
 		WikiPageFactory $wikiPageFactory,
 		IntroMessageBuilder $introMessageBuilder,

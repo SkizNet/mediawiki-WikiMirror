@@ -12,6 +12,7 @@ use MediaWiki\Languages\LanguageFactory;
 use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Page\PageIdentity;
 use MediaWiki\Page\RedirectLookup;
+use MediaWiki\Registration\ExtensionRegistry;
 use MediaWiki\Status\Status;
 use MediaWiki\Status\StatusFormatter;
 use MediaWiki\Title\Title;
@@ -798,12 +799,19 @@ class Mirror {
 			return false;
 		}
 
+		$extensions = ExtensionRegistry::getInstance()->getAllThings();
+		$version = $extensions['WikiMirror']['version'];
+		$wiki = $this->urlUtils->getCanonicalServer();
+
 		$params['format'] = 'json';
 		$params['formatversion'] = 2;
 
 		$apiUrl = $interwiki->getAPI();
 		$action = $params['action'];
-		$res = $this->httpRequestFactory->get( wfAppendQuery( $apiUrl, $params ), [], $caller );
+		$options = [
+			'userAgent' => "WikiMirror/$version (+{$wiki}) MediaWiki/" . MW_VERSION
+		];
+		$res = $this->httpRequestFactory->get( wfAppendQuery( $apiUrl, $params ), $options, $caller );
 
 		if ( $res === null ) {
 			// API error
