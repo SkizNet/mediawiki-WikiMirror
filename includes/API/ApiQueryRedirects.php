@@ -72,6 +72,8 @@ class ApiQueryRedirects extends ApiQueryBacklinksprop {
 			return;
 		}
 
+		$dbr = $this->getDB();
+
 		// target pages to include in our query, mapping of ns => [ name1, name2, ... ]
 		$include = [];
 
@@ -109,16 +111,17 @@ class ApiQueryRedirects extends ApiQueryBacklinksprop {
 		// continuation data, if specified, must be in the form target_page|mirror_rd_id|1
 		// process that here, or leave null if no continuation data was specified
 		$continue = null;
+
 		if ( isset( $params['rdcontinue'] ) ) {
 			// formatting was already validated in execute()
 			$continue = explode( '|', $params['rdcontinue'] );
 			$mirror = array_pop( $continue );
 			if ( $mirror === '1' ) {
 				$continue = array_combine( $orderby, $continue );
+				$where[] = $dbr->buildComparison( '>=', $continue );
 			}
 		}
 
-		$dbr = $this->getDB();
 		$saved = [];
 		$map = [];
 
@@ -161,24 +164,6 @@ class ApiQueryRedirects extends ApiQueryBacklinksprop {
 				}
 
 				$result->removeValue( [ 'query', 'pages', $i, 'redirects' ], null );
-			}
-
-			// if we're doing a query continuation, check if this title should be excluded
-			if ( $continue !== null ) {
-				if (
-					$pageNs < $continue['rr_namespace']
-					|| ( $pageNs === $continue['rr_namespace'] && ( $pageTitle <=> $continue['rr_title'] ) < 0 )
-				) {
-					continue;
-				} elseif ( $pageNs === $continue['rr_namespace'] && $pageTitle === $continue['rr_title'] ) {
-					$redirectId = $continue['rr_from'];
-					$where[] = $dbr->makeList( [
-						'rr_namespace' => $pageNs,
-						'rr_title' => $pageTitle,
-						"rr_from >= $redirectId"
-					], IDatabase::LIST_AND );
-					continue;
-				}
 			}
 
 			$include[$pageNs][] = $pageTitle;
