@@ -108,9 +108,9 @@ class ApiQueryRedirects extends ApiQueryBacklinksprop {
 		$orderby[] = 'rr_from';
 		unset( $pageSet, $pageTitles, $pageMap );
 
-		if ( isset( $params['rdcontinue'] ) ) {
+		if ( isset( $params['continue'] ) ) {
 			// formatting was already validated in execute()
-			$continue = explode( '|', $params['rdcontinue'] );
+			$continue = explode( '|', $params['continue'] );
 			$mirror = array_pop( $continue );
 			if ( $mirror === '1' ) {
 				$continue = array_combine( $orderby, $continue );
