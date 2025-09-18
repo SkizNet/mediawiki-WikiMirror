@@ -1,7 +1,7 @@
 {
 	"name": "WikiMirror",
 	"namemsg": "wikimirror-extensionname",
-	"version": "0.19.0",
+	"version": "0.20.0",
 	"author": [
 		"Ryan Schmidt"
 	],
@@ -48,7 +48,6 @@
 	},
 	"Hooks": {
 		"ApiCheckCanExecute": "api",
-		"APIGetAllowedParams": "api",
 		"ApiMain::moduleManager": "api",
 		"ApiMakeParserOptions": "api",
 		"APIQueryAfterExecute": "api",
@@ -68,7 +67,6 @@
 		"api": {
 			"class": "WikiMirror\\API\\Hooks",
 			"services": [
-				"DBLoadBalancer",
 				"Mirror"
 			]
 		},
