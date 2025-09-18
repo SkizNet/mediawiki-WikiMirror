@@ -108,10 +108,6 @@ class ApiQueryRedirects extends ApiQueryBacklinksprop {
 		$orderby[] = 'rr_from';
 		unset( $pageSet, $pageTitles, $pageMap );
 
-		// continuation data, if specified, must be in the form target_page|mirror_rd_id|1
-		// process that here, or leave null if no continuation data was specified
-		$continue = null;
-
 		if ( isset( $params['rdcontinue'] ) ) {
 			// formatting was already validated in execute()
 			$continue = explode( '|', $params['rdcontinue'] );

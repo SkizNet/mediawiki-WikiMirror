@@ -50,6 +50,7 @@
 		"ApiCheckCanExecute": "api",
 		"ApiMain::moduleManager": "api",
 		"ApiMakeParserOptions": "api",
+		"ApiQuery::moduleManager": "api",
 		"APIQueryAfterExecute": "api",
 		"BeforePageDisplay": "mirror",
 		"getUserPermissionsErrors": "mirror",

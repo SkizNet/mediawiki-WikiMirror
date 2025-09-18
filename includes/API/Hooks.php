@@ -12,6 +12,7 @@ use MediaWiki\Api\ApiQueryRevisions;
 use MediaWiki\Api\Hook\ApiCheckCanExecuteHook;
 use MediaWiki\Api\Hook\ApiMain__moduleManagerHook;
 use MediaWiki\Api\Hook\ApiMakeParserOptionsHook;
+use MediaWiki\Api\Hook\ApiQuery__moduleManagerHook;
 use MediaWiki\Api\Hook\APIQueryAfterExecuteHook;
 use MediaWiki\Api\IApiMessage;
 use MediaWiki\Message\Message;
@@ -27,6 +28,7 @@ class Hooks implements
 	ApiCheckCanExecuteHook,
 	ApiMain__moduleManagerHook,
 	ApiMakeParserOptionsHook,
+	ApiQuery__moduleManagerHook,
 	APIQueryAfterExecuteHook
 {
 	/** @var Mirror */
@@ -92,7 +94,15 @@ class Hooks implements
 				],
 			] );
 		}
+	}
 
+	/**
+	 * Override prop=redirects to accommodate mirrored pages
+	 *
+	 * @param ApiModuleManager $moduleManager
+	 * @return void
+	 */
+	public function onApiQuery__moduleManager( $moduleManager ) {
 		$moduleManager->addModule( 'redirects', 'prop', [
 			'class' => 'WikiMirror\API\ApiQueryRedirects',
 			'services' => [
