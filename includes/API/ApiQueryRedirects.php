@@ -201,9 +201,10 @@ class ApiQueryRedirects extends ApiQueryBacklinksprop {
 			}
 
 			$path = [ 'query', 'pages', $map["{$row->rr_namespace}#{$row->rr_title}"], 'redirects' ];
+			$title = Title::makeTitle( $row->rp_namespace, $row->rp_title );
 			$result->addValue( $path, null, [
 				'ns' => (int)$row->rp_namespace,
-				'title' => $row->rp_title,
+				'title' => $title->getPrefixedText(),
 				'missing' => true,
 				'known' => true
 			] );
