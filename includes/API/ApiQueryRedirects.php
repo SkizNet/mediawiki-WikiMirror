@@ -165,17 +165,20 @@ class ApiQueryRedirects extends ApiQueryBacklinksprop {
 			$include[$pageNs][] = $pageTitle;
 		}
 
+		$includeSql = [];
 		foreach ( $include as $ns => $pages ) {
-			$where[] = $dbr->makeList( [
+			$includeSql[] = $dbr->makeList( [
 				'rr_namespace' => $ns,
 				'rr_title' => $pages
 			], IDatabase::LIST_AND );
 		}
 
+		$where[] = $dbr->makeList( $includeSql, IDatabase::LIST_OR );
+
 		$res = $dbr->select(
 			[ 'remote_redirect', 'remote_page' ],
 			[ 'rr_from', 'rr_namespace', 'rr_title', 'rp_namespace', 'rp_title' ],
-			$dbr->makeList( $where, IDatabase::LIST_OR ),
+			$dbr->makeList( $where, IDatabase::LIST_AND ),
 			__METHOD__,
 			[
 				'LIMIT' => $params['limit'] + 1,
