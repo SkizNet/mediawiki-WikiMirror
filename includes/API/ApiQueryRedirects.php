@@ -239,9 +239,8 @@ class ApiQueryRedirects extends ApiQueryBacklinksprop {
 		if ( $next !== null ) {
 			// update rdcontinue to begin with this next item
 			$rc = [];
-			$offset = 3 - count( $orderby );
 			foreach ( $orderby as $key ) {
-				$rc[] = $next[$key + $offset];
+				$rc[] = $next[$key];
 			}
 
 			// mark as non-mirrored continue
