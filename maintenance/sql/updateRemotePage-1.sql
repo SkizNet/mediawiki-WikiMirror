@@ -2,6 +2,7 @@
 -- It should *NOT* be run standalone!
 
 DROP TABLE IF EXISTS /*_*/remote_page2;
+DROP TABLE IF EXISTS /*_*/remote_redirect2;
 
 CREATE TABLE /*_*/remote_page2 (
     -- Remote ID for this page
