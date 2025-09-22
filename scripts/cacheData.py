@@ -121,7 +121,7 @@ for ns in ns_data:
                             if args.verbose:
                                 size = article["version"].get("size", {"value": 0, "unit_text": "B"})
                                 print(f"Found article {article['name']} ({article['identifier']}) with {size['value']}{size['unit_text']} body")
-                            else if i % 1000 == 0:
+                            elif i % 5000 == 0:
                                 print(i)
 
                             h = hashlib.sha1(article["name"].encode("utf-8"), usedforsecurity=False)
