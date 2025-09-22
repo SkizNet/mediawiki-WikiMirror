@@ -91,8 +91,7 @@ for ns in ns_data:
     snapshot_id = ns["identifier"]
 
     for chunk_id in ns["chunks"]:
-        if args.verbose:
-            print(f"Processing chunk {snapshot_id}/{chunk_id}...")
+        print(f"Processing chunk {snapshot_id}/{chunk_id}...")
         with session.get(f"https://api.enterprise.wikimedia.com/v2/snapshots/{snapshot_id}/chunks/{chunk_id}/download", stream=True, allow_redirects=True) as r:
             if not r.ok:
                 print(r.content)
@@ -107,10 +106,10 @@ for ns in ns_data:
                     if ti is None or not ti.isfile():
                         continue
 
-                    if args.verbose:
-                        print(f"Found file {ti.name} in tarball")
+                    print(f"Found file {ti.name} in tarball")
 
                     with io.TextIOWrapper(tf.extractfile(ti), encoding="utf-8") as f:
+                        i = 0
                         for line in f:
                             article = json.loads(line)
                             if "article_body" not in article or "html" not in article["article_body"] or "wikitext" not in article["article_body"]:
@@ -118,9 +117,12 @@ for ns in ns_data:
                                     print(f"Found article {article['name']} ({article['identifier']}) with no body")
                                 continue
 
+                            i += 1
                             if args.verbose:
                                 size = article["version"].get("size", {"value": 0, "unit_text": "B"})
                                 print(f"Found article {article['name']} ({article['identifier']}) with {size['value']}{size['unit_text']} body")
+                            else if i % 1000 == 0:
+                                print(i)
 
                             h = hashlib.sha1(article["name"].encode("utf-8"), usedforsecurity=False)
                             cache_path = cache_dir / str(ns['namespace']['identifier']) / h.hexdigest()[0:2]
