@@ -110,63 +110,46 @@ namespace WikiMirror\Maintenance {
 
 			if ( $finish ) {
 				$this->outputChanneled( 'Preparing temp tables...' );
-				$db->sourceFile( __DIR__ . '/sql/updateRemotePage-1.sql' );
-				$now = $db->addQuotes( wfTimestampNow() );
+				$dbName = $db->getDBname();
+				$pageTable = $db->tableName( 'wikimirror_page' );
+				$redirectTable = $db->tableName( 'wikimirror_redirect' );
 
-				$this->outputChanneled( 'Copying page data...' );
-				$offset = 0;
-				do {
-					$this->outputChanneled( (string)$offset );
-					$db->insertSelect(
-						'remote_page2',
-						'wikimirror_page',
-						[
-							'rp_id' => 'page_id',
-							'rp_namespace' => 'page_namespace',
-							'rp_title' => 'page_title',
-							'rp_updated' => $now,
-						],
-						'',
-						__METHOD__,
-						[],
-						[
-							'ORDER BY' => 'page_id ASC',
-							'LIMIT' => $this->getBatchSize(),
-							'OFFSET' => $offset,
-						]
+				$res = $db->query( <<<END
+					SELECT TABLE_NAME, COLUMN_NAME
+					FROM INFORMATION_SCHEMA.columns
+					WHERE TABLE_SCHEMA = {$db->addQuotes( $dbName )}
+						AND TABLE_NAME IN ({$db->addQuotes( $pageTable )}, {$db->addQuotes( $redirectTable )})
+					END,
+					__METHOD__
+				);
+
+				$pageRename = [];
+				$redirectRename = [];
+
+				foreach ( $res as $row ) {
+					if ( $row->TABLE_NAME === $pageTable && str_starts_with( $row->COLUMN_NAME, 'page_' ) ) {
+						$pageRename[$row->COLUMN_NAME] = substr_replace( $row->COLUMN_NAME, 'rp_', 0, 5 );
+					} elseif ( $row->TABLE_NAME === $redirectTable && str_starts_with( $row->COLUMN_NAME, 'rd_' ) ) {
+						$redirectRename[$row->COLUMN_NAME] = substr_replace( $row->COLUMN_NAME, 'rr_', 0, 3 );
+					}
+				}
+
+				foreach ( $pageRename as $old => $new ) {
+					$db->query(
+						"ALTER TABLE {$db->addIdentifierQuotes( $pageTable )} RENAME COLUMN {$old} TO {$new}",
+						__METHOD__
 					);
+				}
 
-					$offset += $this->getBatchSize();
-				} while ( $db->affectedRows() > 0 );
-
-				$this->outputChanneled( 'Copying redirect data...' );
-				$offset = 0;
-				do {
-					$this->outputChanneled( (string)$offset );
-					$db->insertSelect(
-						'remote_redirect2',
-						'wikimirror_redirect',
-						[
-							'rr_from' => 'rd_from',
-							'rr_namespace' => 'rd_namespace',
-							'rr_title' => 'rd_title',
-							'rr_updated' => $now,
-						],
-						'',
-						__METHOD__,
-						[],
-						[
-							'ORDER BY' => 'rd_from ASC',
-							'LIMIT' => $this->getBatchSize(),
-							'OFFSET' => $offset,
-						]
+				foreach ( $redirectRename as $old => $new ) {
+					$db->query(
+						"ALTER TABLE {$db->addIdentifierQuotes( $redirectTable )} RENAME COLUMN {$old} TO {$new}",
+						__METHOD__
 					);
-
-					$offset += $this->getBatchSize();
-				} while ( $db->affectedRows() > 0 );
+				}
 
 				$this->outputChanneled( 'Finishing up...' );
-				$db->sourceFile( __DIR__ . '/sql/updateRemotePage-2.sql' );
+				$db->sourceFile(__DIR__ . '/sql/updateRemotePage.sql');
 			}
 
 			$this->outputChanneled( 'Complete!' );
