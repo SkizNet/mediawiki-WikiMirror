@@ -111,8 +111,8 @@ namespace WikiMirror\Maintenance {
 			if ( $finish ) {
 				$this->outputChanneled( 'Preparing temp tables...' );
 				$dbName = $db->getDBname();
-				$pageTable = $db->tableName( 'wikimirror_page' );
-				$redirectTable = $db->tableName( 'wikimirror_redirect' );
+				$pageTable = $db->tableName( 'wikimirror_page', 'raw' );
+				$redirectTable = $db->tableName( 'wikimirror_redirect', 'raw' );
 
 				$res = $db->query( <<<END
 					SELECT TABLE_NAME, COLUMN_NAME
