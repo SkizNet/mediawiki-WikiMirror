@@ -2,11 +2,13 @@
 
 namespace WikiMirror\API;
 
+use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\ApiQuery;
 use MediaWiki\Api\ApiQueryBacklinksprop;
 use MediaWiki\Linker\LinksMigration;
 use MediaWiki\Title\Title;
 use Wikimedia\Rdbms\IDatabase;
+use WikiMirror\Compat\ReflectionHelper;
 
 class ApiQueryRedirects extends ApiQueryBacklinksprop {
 	public function __construct(
@@ -18,6 +20,13 @@ class ApiQueryRedirects extends ApiQueryBacklinksprop {
 	}
 
 	public function execute() {
+		// populate param cache then indicate that pageid and title information should always be presented in output
+		// while this uses Reflection, it's overall less icky than overriding getVal() to return it
+		$params = $this->extractRequestParams();
+		$params['props'][] = 'pageid';
+		$params['props'][] = 'title';
+		ReflectionHelper::setPrivateProperty( ApiBase::class, 'mParamCache', $this, [ 1 => $params ] );
+
 		parent::execute();
 		$this->addMirroredRedirectInfo();
 	}
@@ -111,11 +120,11 @@ class ApiQueryRedirects extends ApiQueryBacklinksprop {
 		if ( isset( $params['continue'] ) ) {
 			// formatting was already validated in execute()
 			$continue = explode( '|', $params['continue'] );
-			$mirror = array_pop( $continue );
-			if ( $mirror === '1' ) {
-				$continue = array_combine( $orderby, $continue );
-				$where[] = $dbr->buildComparison( '>=', $continue );
-			}
+			$mirror = array_pop( $continue ) === '1';
+			$continue = array_combine( $orderby, $continue );
+			// if we have a non-mirrored continuation, exclude the current page since we already enumerated
+			// mirrored redirects for it.
+			$where[] = $dbr->buildComparison( $mirror ? '>=' : '>', $continue );
 		}
 
 		$saved = [];
