@@ -73,7 +73,7 @@ session.headers["User-Agent"] = "WikiMirror Data Update/v1.0 +https://www.mediaw
 
 # Get all namespaces for project
 search_filter = [{"field": "is_part_of.identifier", "value": args.project}]
-r = session.post("https://api.enterprise.wikimedia.com/v2/snapshots", json={"filters": search_filter, "fields": ["identifier", "chunks", "namespace", "namespace.name", "namespace.identifier"]})
+r = session.post("https://api.enterprise.wikimedia.com/v2/snapshots", json={"filters": search_filter, "fields": ["identifier", "chunks", "namespace", "namespace.name", "namespace.identifier", "date_modified"]})
 if not r.ok:
     print(r.content)
     r.raise_for_status()
