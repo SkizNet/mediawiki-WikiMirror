@@ -81,16 +81,33 @@ ns_data = r.json()
 if args.verbose:
     print("Dumping the following namespaces: " + ", ".join(str(ns['namespace']['identifier']) for ns in ns_data if not args.namespace or str(ns['namespace']['identifier']) in args.namespace))
 
+# Check progress file to determine if we're continuing where we left off in a previous run
+progress = {}
+progress_file = cache_dir / "progress.json"
+try:
+    # if file doesn't exist or contains invalid JSON, skip it
+    with open(progress_file, mode="r", encoding="utf-8") as f:
+        progress = json.load(f)
+except:
+    pass
+
 for ns in ns_data:
-    if args.namespace and str(ns['namespace']['identifier']) not in args.namespace:
+    nss = str(ns['namespace']['identifier'])
+    if args.namespace and nss not in args.namespace:
         continue
 
+    if nss not in progress or progress[nss]["date_modified"] != ns["date_modified"]:
+        progress[nss] = {"date_modified": ns["date_modified"], "chunks": []}
+    completed_chunks = progress[nss]["chunks"]
+
     if args.verbose:
-        print(f"Processing namespace {ns['namespace']['identifier']} ({len(ns['chunks'])} chunks)...")
+        print(f"Processing namespace {nss} ({len(ns['chunks'])} chunks)...")
 
     snapshot_id = ns["identifier"]
 
     for chunk_id in ns["chunks"]:
+        if chunk_id in completed_chunks:
+            continue
         print(f"Processing chunk {snapshot_id}/{chunk_id}...")
         with session.get(f"https://api.enterprise.wikimedia.com/v2/snapshots/{snapshot_id}/chunks/{chunk_id}/download", stream=True, allow_redirects=True) as r:
             if not r.ok:
@@ -131,3 +148,7 @@ for ns in ns_data:
                             # store in pretty-printed format to make it easier to debug stuff later on via visual/human inspection
                             with open(cache_path / f"{article['identifier']}.json", "wt", encoding="utf-8") as cf:
                                 json.dump(article, cf, ensure_ascii=False, indent=2, sort_keys=True)
+
+        completed_chunks.append(chunk_id)
+        with open(progress_file, mode="w", encoding="utf-8") as f:
+            json.dump(progress, f)
