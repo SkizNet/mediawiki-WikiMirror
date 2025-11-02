@@ -63,7 +63,7 @@ cache_dir.mkdir(parents=True, exist_ok=True)
 
 # Set up requests
 session = requests.Session()
-retry = urllib3.util.Retry(total=3, status_forcelist=[403], redirect=False)
+retry = urllib3.util.Retry(total=5, status_forcelist=[403], backoff_factor=5, redirect=False)
 session.mount("https://", requests.adapters.HTTPAdapter(max_retries=retry))
 
 # Attempt auth
