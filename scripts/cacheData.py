@@ -6,8 +6,10 @@ import json
 import os
 import pathlib
 import requests
+import requests.adapters
 import sys
 import tarfile
+import urllib3.util
 
 
 parser = argparse.ArgumentParser(
@@ -59,8 +61,12 @@ if not args.username or not args.password:
 cache_dir = pathlib.Path(args.directory, args.project)
 cache_dir.mkdir(parents=True, exist_ok=True)
 
-# Attempt auth
+# Set up requests
 session = requests.Session()
+retry = urllib3.util.Retry(total=3, status_forcelist=[403], redirect=False)
+session.mount("https://", requests.adapters.HTTPAdapter(max_retries=retry))
+
+# Attempt auth
 r = session.post("https://auth.enterprise.wikimedia.com/v1/login", json={"username": args.username, "password": args.password})
 if not r.ok:
     print(r.content)
