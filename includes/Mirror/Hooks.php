@@ -14,6 +14,7 @@ use MediaWiki\Hook\TitleIsAlwaysKnownHook;
 use MediaWiki\Linker\Hook\HtmlPageLinkRendererEndHook;
 use MediaWiki\Linker\LinkRenderer;
 use MediaWiki\Linker\LinkTarget;
+use MediaWiki\Message\Message;
 use MediaWiki\Output\OutputPage;
 use MediaWiki\Page\Hook\WikiPageFactoryHook;
 use MediaWiki\Permissions\Hook\GetUserPermissionsErrorsExpensiveHook;
@@ -133,6 +134,16 @@ class Hooks implements
 		// read: lets people read the mirrored page
 		// fork: lets people fork the page
 		$allowedActions = [ 'read', 'fork' ];
+
+		// anon users can't fetch mirror pages that require remote API calls; only do this if WME cache is enabled
+		if ( $action === 'read'
+			&& $this->mirror->isEnterpriseCacheEnabled()
+			&& $user->isAnon()
+			&& !$this->mirror->canServeLocally( $title )
+		) {
+			$result = [ 'badaccess-groups', Message::listParam( [ 'user' ], 'comma' ), 1 ];
+			return false;
+		}
 
 		if ( !in_array( $action, $allowedActions ) && $this->mirror->canMirror( $title, false ) ) {
 			// user doesn't have the ability to perform this action with this page

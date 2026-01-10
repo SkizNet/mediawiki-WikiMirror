@@ -425,6 +425,34 @@ class Mirror {
 		return true;
 	}
 
+	public function isEnterpriseCacheEnabled(): bool {
+		return $this->options->get( 'WikiMirrorCacheDirectory' ) !== null;
+	}
+
+	/**
+	 * Test if we can serve this page without remote lookups
+	 * (either because it is a local page or because it exists in the enterprise cache)
+	 *
+	 * @param PageIdentity $page Page to test
+	 * @return bool
+	 */
+	public function canServeLocally( PageIdentity $page ): bool {
+		// prime cache
+		$this->canMirror( $page, true );
+		$cacheKey = $this->titleFormatter->getPrefixedText( $page );
+		$cacheResult = $this->titleCache[$cacheKey];
+
+		if ( $cacheResult === 'forked' || $cacheResult === 'illegal_title' ) {
+			return true;
+		}
+
+		if ( $cacheResult === 'valid' || $cacheResult === 'fast_valid' ) {
+			return $this->getEnterpriseCache( $page ) !== null;
+		}
+
+		return false;
+	}
+
 	/**
 	 * Mark that a Title is about to be imported, preventing it from being mirrored.
 	 *
