@@ -7,6 +7,7 @@ import os
 import pathlib
 import requests
 import requests.adapters
+import signal
 import sys
 import tarfile
 import urllib3.util
@@ -39,6 +40,9 @@ parser.add_argument("-n", "--namespace",
                     action="extend",
                     help="Namespaces to import, specified via namespace number. This option can be specified multiple times to select "
                          "multiple namespaces. If unspecified, imports all namespaces present in the WME API (Main, Category, Template, and File).")
+parser.add_argument("--cron",
+                    action="store_true",
+                    help="Flag to indicate this is running as a cron job instead of interactively (various behavior changes).")
 parser.add_argument("project", help="Wikimedia project (database) name.")
 
 args = parser.parse_args()
@@ -61,6 +65,40 @@ if not args.username or not args.password:
 cache_dir = pathlib.Path(args.directory, args.project)
 cache_dir.mkdir(parents=True, exist_ok=True)
 
+# bail out if we're currently running
+pidfile = cache_dir / ".pid"
+if pidfile.exists():
+    # If we're in cron, silently quit without producing output to avoid spurious emails
+    if not args.cron:
+        print("An automated import is currently running, please wait for it to finish before beginning a manual import.")
+    sys.exit(0)
+
+# set up a signal handler
+def graceful_exit(signum, frame):
+    try:
+        pidfile.unlink()
+    except FileNotFoundError:
+        pass
+    print(f"Aborting due to signal {signum}", file=sys.stderr)
+    sys.exit(1)
+
+signal.signal(signal.SIGINT, graceful_exit)
+signal.signal(signal.SIGTERM, graceful_exit)
+
+# set up an exception handler
+def excepthook(type, value, traceback):
+    try:
+        pidfile.unlink()
+    except FileNotFoundError:
+        pass
+    # call default handler to handle displaying traceback and terminating execution
+    sys.__excepthook__(type, value, traceback)
+
+sys.excepthook = excepthook
+
+# save our pid
+pidfile.write_text(str(os.getpid()))
+
 # Set up requests
 session = requests.Session()
 retry = urllib3.util.Retry(total=5, status_forcelist=[403], backoff_factor=5, redirect=False)
@@ -75,7 +113,7 @@ auth_data = r.json()
 
 # Set up Bearer token
 session.headers["Authorization"] = f"Bearer {auth_data['access_token']}"
-session.headers["User-Agent"] = "WikiMirror Data Update/v1.0 +https://www.mediawiki.org/wiki/Extension:WikiMirror"
+session.headers["User-Agent"] = "WikiMirror Data Update/v1.1 +https://www.mediawiki.org/wiki/Extension:WikiMirror"
 
 # Get all namespaces for project
 search_filter = [{"field": "is_part_of.identifier", "value": args.project}]
