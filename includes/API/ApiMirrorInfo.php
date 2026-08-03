@@ -60,7 +60,7 @@ class ApiMirrorInfo extends ApiQueryBase {
 	}
 
 	/**
-	 * @return array{last_update:?string,update_in_progress:bool}
+	 * @return array{dump_update:?string,wme_update:?string,wme_enabled:bool,update_in_progress:bool}
 	 */
 	private function getUpdateStatus(): array {
 		return [
@@ -72,12 +72,8 @@ class ApiMirrorInfo extends ApiQueryBase {
 	}
 
 	private function getXmlUpdateDate(): ?string {
-		$date = $this->getDB()->selectField( 'remote_page', 'MAX(rp_updated)', [], __METHOD__ );
-		if ( is_string( $date ) ) {
-			return wfTimestamp( TS_ISO_8601, $date );
-		}
-
-		return null;
+		$date = $this->getDB()->selectField( 'remote_page', 'MAX(rp_touched)', [], __METHOD__ );
+		return $date !== false ? wfTimestamp( TS_ISO_8601, $date ) : null;
 	}
 
 	private function getEnterpriseUpdateDate(): ?string {

@@ -6,6 +6,7 @@
 	},
 	"apihelp-query+redirects-param-mirror": "Include mirrored redirects in the results. Ignored when this module is used as a generator.",
 	"apihelp-query+mirrorinfo-description": "Get the mirror update status.",
+	"apihelp-query+mirrorinfo-summary": "Displays information about when the local mirror was last updated and whether an update is currently in progress.",
 	"apihelp-query+mirrorinfo-example": "Get the mirror update status.",
 	"fork": "Fork page",
 	"mirror": "Mirror page",
