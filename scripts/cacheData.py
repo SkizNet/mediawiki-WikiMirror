@@ -10,6 +10,7 @@ import requests.adapters
 import signal
 import sys
 import tarfile
+import time
 import urllib3.util
 
 
@@ -65,13 +66,29 @@ if not args.username or not args.password:
 cache_dir = pathlib.Path(args.directory, args.project)
 cache_dir.mkdir(parents=True, exist_ok=True)
 
+def is_progress_stale(progress_file):
+    # if progress.json was last written to over a day ago, assume the previous PID died/stalled
+    try:
+        return time.time() - progress_file.stat().st_mtime > 24 * 60 * 60
+    except OSError:
+        # we'll get here if progress_file doesn't exist
+        return True
+
 # bail out if we're currently running
 pidfile = cache_dir / ".pid"
+progress_file = cache_dir / "progress.json"
+
 if pidfile.exists():
-    # If we're in cron, silently quit without producing output to avoid spurious emails
-    if not args.cron:
-        print("An automated import is currently running, please wait for it to finish before beginning a manual import.")
-    sys.exit(0)
+    if is_progress_stale(progress_file):
+        try:
+            pidfile.unlink()
+        except FileNotFoundError:
+            pass
+    else:
+        # If we're in cron, silently quit without producing output to avoid spurious emails
+        if not args.cron:
+            print("An automated import is currently running, please wait for it to finish before beginning a manual import.")
+        sys.exit(0)
 
 # set up a signal handler
 def graceful_exit(signum, frame):
@@ -127,7 +144,6 @@ if args.verbose:
 
 # Check progress file to determine if we're continuing where we left off in a previous run
 progress = {}
-progress_file = cache_dir / "progress.json"
 try:
     # if file doesn't exist or contains invalid JSON, skip it
     with open(progress_file, mode="r", encoding="utf-8") as f:
@@ -142,7 +158,11 @@ for ns in ns_data:
 
     if nss not in progress or progress[nss]["date_modified"] != ns["date_modified"]:
         progress[nss] = {"date_modified": ns["date_modified"], "chunks": []}
+    progress[nss]["total_chunks"] = len(ns["chunks"])
     completed_chunks = progress[nss]["chunks"]
+
+    with open(progress_file, mode="w", encoding="utf-8") as f:
+        json.dump(progress, f)
 
     if args.verbose:
         print(f"Processing namespace {nss} ({len(ns['chunks'])} chunks)...")

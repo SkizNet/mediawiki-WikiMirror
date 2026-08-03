@@ -5,6 +5,8 @@
 		]
 	},
 	"apihelp-query+redirects-param-mirror": "Include mirrored redirects in the results. Ignored when this module is used as a generator.",
+	"apihelp-query+mirrorinfo-description": "Get the mirror update status.",
+	"apihelp-query+mirrorinfo-example": "Get the mirror update status.",
 	"fork": "Fork page",
 	"mirror": "Mirror page",
 	"logentry-delete-fork": "$1 {{GENDER:$2|deleted}} mirrored page $3",

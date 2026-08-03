@@ -103,6 +103,14 @@ class Hooks implements
 	 * @return void
 	 */
 	public function onApiQuery__moduleManager( $moduleManager ) {
+		$moduleManager->addModule( 'mirrorinfo', 'meta', [
+			'class' => 'WikiMirror\\API\\ApiMirrorInfo',
+			'services' => [
+				'InterwikiLookup',
+				'Mirror',
+			]
+		] );
+
 		$moduleManager->addModule( 'redirects', 'prop', [
 			'class' => 'WikiMirror\API\ApiQueryRedirects',
 			'services' => [
