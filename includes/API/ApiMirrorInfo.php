@@ -81,14 +81,9 @@ class ApiMirrorInfo extends ApiQueryBase {
 			return null;
 		}
 
-		$cacheDirectory = $this->getConfig()->get( 'WikiMirrorCacheDirectory' );
-		if ( $cacheDirectory === null ) {
-			return null;
-		}
-
-		$progressFile = rtrim( $cacheDirectory, '/\\' ) . '/' . $this->mirror->getWikiId() . '/progress.json';
-		// TOCTTOU race conditions prevent us from easily determining if file_get_contents would succeed
-		// Simply try it and let it fail (without raising warnings) if the file does not exist or is unreadable.
+		$cacheDir = $this->getConfig()->get( 'WikiMirrorCacheDirectory' );
+		$wikiId = $this->mirror->getWikiId();
+		$progressFile = "{$cacheDir}/{$wikiId}/progress.json";
 		// phpcs:ignore Generic.PHP.NoSilencedErrors.Discouraged
 		$progressData = @file_get_contents( $progressFile );
 		if ( $progressData === false ) {
@@ -111,13 +106,15 @@ class ApiMirrorInfo extends ApiQueryBase {
 				continue;
 			}
 
-			$date = wfTimestamp( TS_ISO_8601, (string)$namespace['date_modified'] );
+			// can't use wfTimestamp since the format is like 2026-08-01T01:18:35.063159782Z
+			// and wfTimestamp doesn't handle decimals after the seconds
+			$date = strtotime( $namespace['date_modified'] );
 			if ( $date !== false ) {
 				$dates[] = $date;
 			}
 		}
 
-		return $dates ? min( $dates ) : null;
+		return $dates ? wfTimestamp( TS_ISO_8601, min( $dates ) ) : null;
 	}
 
 	private function isXmlUpdateInProgress(): bool {
